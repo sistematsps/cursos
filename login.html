@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login do Aluno</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f6fa;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    width: 320px;
+  }
+  h2 {
+    text-align: center;
+    color: #007bff;
+  }
+  input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Login do Aluno</h2>
+  <input type="email" id="email" placeholder="E-mail" required>
+  <input type="password" id="senha" placeholder="Senha" required>
+  <button onclick="login()">Entrar</button>
+  <p style="text-align:center;margin-top:10px;">Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+</div>
+
+<script>
+  // 🔧 Configuração Firebase (mesma usada no cadastro)
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_DOMINIO.firebaseapp.com",
+    projectId: "SEU_PROJETO_ID",
+    storageBucket: "SEU_BUCKET.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.getAuth(app);
+
+  async function login() {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+
+    if (!email || !senha) {
+      alert("Por favor, preencha todos os campos!");
+      return;
+    }
+
+    try {
+      const credenciais = await firebase.signInWithEmailAndPassword(auth, email, senha);
+      const usuario = credenciais.user;
+      alert("Login realizado com sucesso!");
+      // Salva UID temporariamente para o painel
+      localStorage.setItem("alunoUID", usuario.uid);
+      window.location.href = "painel.html";
+    } catch (erro) {
+      console.error(erro);
+      if (erro.code === "auth/wrong-password") {
+        alert("Senha incorreta.");
+      } else if (erro.code === "auth/user-not-found") {
+        alert("Usuário não encontrado.");
+      } else {
+        alert("Erro ao fazer login: " + erro.message);
+      }
+    }
+  }
+</script>
+
+</body>
+  </html>
