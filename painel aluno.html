@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Aluno</title>
+<style>
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f5f6fa;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background-color: #007bff;
+    color: white;
+    padding: 15px 25px;
+    text-align: center;
+  }
+  .painel {
+    max-width: 900px;
+    margin: 30px auto;
+    background: white;
+    border-radius: 12px;
+    padding: 20px 40px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h2 {
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+  }
+  .curso {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+  }
+  .curso:last-child {
+    border-bottom: none;
+  }
+  .info {
+    text-align: left;
+  }
+  .progresso {
+    width: 180px;
+    height: 12px;
+    border-radius: 6px;
+    background: #ddd;
+    overflow: hidden;
+  }
+  .barra {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.5s;
+  }
+  button {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #0056b3;
+  }
+  .certificado {
+    background: #28a745;
+  }
+  .logout {
+    background: #dc3545;
+    float: right;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Painel do Aluno</h1>
+</header>
+
+<div class="painel">
+  <h2>Bem-vindo, <span id="nomeAluno"></span>!</h2>
+  <button class="logout" onclick="sair()">Sair</button>
+
+  <h3>Seus Cursos</h3>
+  <div id="listaCursos"></div>
+</div>
+
+<script>
+  // Dados simulados (em breve substituímos pelo Firestore)
+  const aluno = {
+    nome: "João da Silva",
+    cursos: [
+      { id: 1, nome: "Introdução à Contabilidade", progresso: 100, nota: 9.5 },
+      { id: 2, nome: "Gestão Financeira Pessoal", progresso: 75, nota: null },
+      { id: 3, nome: "Educação Fiscal para Jovens", progresso: 30, nota: null },
+    ]
+  };
+
+  // Exibir nome e cursos
+  document.getElementById("nomeAluno").textContent = aluno.nome;
+
+  const lista = document.getElementById("listaCursos");
+  aluno.cursos.forEach(curso => {
+    const div = document.createElement("div");
+    div.className = "curso";
+
+    const info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = `
+      <strong>${curso.nome}</strong><br>
+      Progresso: ${curso.progresso}%<br>
+      ${curso.nota ? `Nota Final: <b>${curso.nota}</b>` : ""}
+    `;
+
+    const barra = document.createElement("div");
+    barra.className = "progresso";
+    const preenchimento = document.createElement("div");
+    preenchimento.className = "barra";
+    preenchimento.style.width = curso.progresso + "%";
+    barra.appendChild(preenchimento);
+
+    const btn = document.createElement("button");
+    btn.textContent = curso.progresso === 100 ? "Ver Certificado" : "Continuar Curso";
+    btn.className = curso.progresso === 100 ? "certificado" : "";
+    btn.onclick = () => abrirCurso(curso);
+
+    div.appendChild(info);
+    div.appendChild(barra);
+    div.appendChild(btn);
+    lista.appendChild(div);
+  });
+
+  function abrirCurso(curso) {
+    if (curso.progresso === 100) {
+      gerarCertificado(curso);
+    } else {
+      alert(`Abrindo curso: ${curso.nome}`);
+      // Aqui podemos redirecionar para o sistema de slides
+      // ex: window.location.href = `curso${curso.id}.html`;
+    }
+  }
+
+  function gerarCertificado(curso) {
+    const data = new Date().toLocaleDateString('pt-BR');
+    const texto = `
+      🏆 Certificado de Conclusão 🏆
+      
+      Certificamos que ${aluno.nome}
+      concluiu o curso "${curso.nome}"
+      em ${data}, com nota final ${curso.nota}.
+    `;
+    alert(texto);
+  }
+
+  function sair() {
+    alert("Saindo do painel...");
+    // Redirecionar para tela de login
+    // window.location.href = "login.html";
+  }
+</script>
+
+</body>
+</html>
