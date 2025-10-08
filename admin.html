@@ -2,242 +2,190 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel Administrativo - Cursos</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Painel Administrativo</title>
 
-<!-- Firebase SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  // 🔧 Configuração Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
-    authDomain: "meuappweb-65522.firebaseapp.com",
-    projectId: "meuappweb-65522",
-    storageBucket: "meuappweb-65522.firebasestorage.app",
-    messagingSenderId: "305368794616",
-    appId: "1:305368794616:web:d987589863479e576ac20d",
-    measurementId: "G-L0VWMGJ003"
-  };
+/* ------------------ CONFIGURAÇÃO FIREBASE ------------------ */
+const firebaseConfig = {
+  apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
+  authDomain: "meuappweb-65522.firebaseapp.com",
+  projectId: "meuappweb-65522",
+  storageBucket: "meuappweb-65522.firebasestorage.app",
+  messagingSenderId: "305368794616",
+  appId: "1:305368794616:web:d987589863479e576ac20d",
+  measurementId: "G-L0VWMGJ003"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  // 🔹 Protege a página — só admin logado pode acessar
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = "login.html";
+/* ------------------ CONTROLE DE LOGIN ------------------ */
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+  } else {
+    // Verificação simples de admin (poderemos aprimorar depois)
+    if (user.email !== "admin@meuapp.com") {
+      alert("Acesso restrito ao administrador.");
+      signOut(auth);
     } else {
+      document.getElementById("admin-email").textContent = user.email;
       carregarCursos();
     }
+  }
+});
+
+window.sair = async () => {
+  await signOut(auth);
+  window.location.href = "login.html";
+};
+
+/* ------------------ CADASTRO DE CURSO ------------------ */
+document.getElementById("form-curso").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const titulo = document.getElementById("titulo").value;
+  const descricao = document.getElementById("descricao").value;
+  const url = document.getElementById("url").value;
+
+  await addDoc(collection(db, "cursos"), {
+    titulo,
+    descricao,
+    url,
+    criadoEm: new Date().toLocaleString()
   });
 
-  // 🔹 Cadastrar curso
-  window.cadastrarCurso = async function cadastrarCurso() {
-    const nome = document.getElementById("nome").value.trim();
-    const descricao = document.getElementById("descricao").value.trim();
-    const cargaHoraria = document.getElementById("cargaHoraria").value.trim();
-    const url = document.getElementById("url").value.trim();
+  alert("Curso cadastrado com sucesso!");
+  document.getElementById("form-curso").reset();
+  carregarCursos();
+});
 
-    if (!nome || !descricao || !cargaHoraria || !url) {
-      alert("Preencha todos os campos!");
-      return;
-    }
+/* ------------------ LISTAR CURSOS ------------------ */
+async function carregarCursos() {
+  const lista = document.getElementById("lista-cursos");
+  lista.innerHTML = "";
 
-    try {
-      await addDoc(collection(db, "cursos"), {
-        nome,
-        descricao,
-        cargaHoraria,
-        url
-      });
+  const snap = await getDocs(collection(db, "cursos"));
+  snap.forEach((docSnap) => {
+    const curso = docSnap.data();
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <h3>${curso.titulo}</h3>
+      <p>${curso.descricao}</p>
+      <small><b>URL:</b> ${curso.url}</small><br>
+      <button class="btn" onclick="editarCurso('${docSnap.id}', '${curso.titulo}', '${curso.descricao}', '${curso.url}')">Editar</button>
+      <button class="btn-danger" onclick="excluirCurso('${docSnap.id}')">Excluir</button>
+    `;
+    lista.appendChild(div);
+  });
+}
 
-      alert("Curso cadastrado com sucesso!");
-      document.getElementById("formCurso").reset();
-      carregarCursos();
-    } catch (erro) {
-      console.error("Erro ao cadastrar curso:", erro);
-      alert("Erro ao cadastrar curso.");
-    }
-  };
+/* ------------------ EDITAR CURSO ------------------ */
+window.editarCurso = (id, titulo, descricao, url) => {
+  document.getElementById("edit-id").value = id;
+  document.getElementById("edit-titulo").value = titulo;
+  document.getElementById("edit-descricao").value = descricao;
+  document.getElementById("edit-url").value = url;
+  document.getElementById("modal-editar").style.display = "flex";
+};
 
-  // 🔹 Carregar cursos
-  async function carregarCursos() {
-    const lista = document.getElementById("listaCursos");
-    lista.innerHTML = "<p>Carregando cursos...</p>";
+window.salvarEdicao = async () => {
+  const id = document.getElementById("edit-id").value;
+  const titulo = document.getElementById("edit-titulo").value;
+  const descricao = document.getElementById("edit-descricao").value;
+  const url = document.getElementById("edit-url").value;
 
-    const querySnap = await getDocs(collection(db, "cursos"));
-    lista.innerHTML = "";
+  const ref = doc(db, "cursos", id);
+  await updateDoc(ref, {
+    titulo,
+    descricao,
+    url,
+    atualizadoEm: new Date().toLocaleString()
+  });
 
-    if (querySnap.empty) {
-      lista.innerHTML = "<p>Nenhum curso cadastrado ainda.</p>";
-      return;
-    }
+  alert("Curso atualizado com sucesso!");
+  fecharModal();
+  carregarCursos();
+};
 
-    querySnap.forEach((docSnap) => {
-      const curso = docSnap.data();
-      const item = document.createElement("li");
-      item.innerHTML = `
-        <strong>${curso.nome}</strong><br>
-        <small>${curso.descricao}</small><br>
-        <em>Carga horária: ${curso.cargaHoraria}h</em><br>
-        <a href="${curso.url}" target="_blank">${curso.url}</a><br>
-        <button onclick="excluirCurso('${docSnap.id}')">Excluir</button>
-      `;
-      lista.appendChild(item);
-    });
+window.fecharModal = () => {
+  document.getElementById("modal-editar").style.display = "none";
+};
+
+/* ------------------ EXCLUIR CURSO ------------------ */
+window.excluirCurso = async (id) => {
+  if (confirm("Tem certeza que deseja excluir este curso?")) {
+    await deleteDoc(doc(db, "cursos", id));
+    alert("Curso excluído.");
+    carregarCursos();
   }
-
-  // 🔹 Excluir curso
-  window.excluirCurso = async function excluirCurso(id) {
-    if (confirm("Tem certeza que deseja excluir este curso?")) {
-      await deleteDoc(doc(db, "cursos", id));
-      alert("Curso excluído com sucesso!");
-      carregarCursos();
-    }
-  };
-
-  // 🔹 Sair e voltar
-  window.sair = async function sair() {
-    await signOut(auth);
-    window.location.href = "login.html";
-  };
-
-  window.voltarPainel = function voltarPainel() {
-    window.location.href = "painel.html";
-  };
+};
 </script>
 
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f5f6fa;
-    margin: 0;
-    padding: 0;
-  }
-
-  header {
-    background-color: #007bff;
-    color: white;
-    text-align: center;
-    padding: 15px;
-  }
-
-  .container {
-    max-width: 700px;
-    background: white;
-    margin: 30px auto;
-    padding: 20px 30px;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-
-  h2 {
-    text-align: center;
-    color: #007bff;
-  }
-
-  label {
-    font-weight: bold;
-    display: block;
-    margin-top: 10px;
-  }
-
-  input, textarea {
-    width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-
-  button {
-    padding: 10px 15px;
-    margin-top: 15px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  #btnCadastrar {
-    background-color: #28a745;
-    color: white;
-    width: 100%;
-  }
-
-  #btnCadastrar:hover {
-    background-color: #218838;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin-top: 20px;
-  }
-
-  li {
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-  }
-
-  li a {
-    color: #007bff;
-    text-decoration: none;
-    word-break: break-all;
-  }
-
-  li a:hover {
-    text-decoration: underline;
-  }
-
-  .acoes {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 15px;
-  }
-
-  #btnVoltar { background-color: #17a2b8; color: white; width: 48%; }
-  #btnVoltar:hover { background-color: #138496; }
-  #btnSair { background-color: #dc3545; color: white; width: 48%; }
-  #btnSair:hover { background-color: #c82333; }
+body { font-family: Arial, sans-serif; background:#f4f6f9; margin:0; padding:20px; }
+header { display:flex; justify-content:space-between; align-items:center; }
+h1 { color:#007bff; }
+form { background:white; padding:20px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); margin-bottom:30px; }
+input, textarea { width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; }
+button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
+.btn { background:#007bff; color:white; margin-right:5px; }
+.btn:hover { background:#0056b3; }
+.btn-danger { background:#dc3545; color:white; }
+.card { background:white; border-radius:8px; box-shadow:0 0 8px rgba(0,0,0,0.1); padding:15px; margin-bottom:15px; }
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; }
+.modal-content { background:white; padding:20px; border-radius:8px; width:300px; }
 </style>
 </head>
 
 <body>
-  <header><h1>Painel Administrativo - Cursos</h1></header>
+<header>
+  <h1>Painel do Administrador</h1>
+  <div>
+    <span id="admin-email"></span>
+    <button class="btn" onclick="sair()">Sair</button>
+  </div>
+</header>
 
-  <div class="container">
-    <h2>Cadastrar Novo Curso</h2>
+<h2>Cadastrar Novo Curso</h2>
+<form id="form-curso">
+  <label>Título do Curso</label>
+  <input type="text" id="titulo" required>
 
-    <form id="formCurso">
-      <label>Nome do Curso</label>
-      <input type="text" id="nome" placeholder="Digite o nome do curso">
+  <label>Descrição</label>
+  <textarea id="descricao" required></textarea>
 
-      <label>Descrição</label>
-      <textarea id="descricao" rows="3" placeholder="Digite uma breve descrição"></textarea>
+  <label>URL do Curso</label>
+  <input type="text" id="url" required>
 
-      <label>Carga Horária (em horas)</label>
-      <input type="number" id="cargaHoraria" placeholder="Ex: 20">
+  <button type="submit" class="btn">Cadastrar Curso</button>
+</form>
 
-      <label>URL do Curso</label>
-      <input type="url" id="url" placeholder="https://seudominio.com/curso1.html">
+<h2>Cursos Cadastrados</h2>
+<div id="lista-cursos"></div>
 
-      <button id="btnCadastrar" type="button" onclick="cadastrarCurso()">Cadastrar Curso</button>
-    </form>
-
-    <h2 style="margin-top:30px;">Cursos Cadastrados</h2>
-    <ul id="listaCursos"></ul>
-
-    <div class="acoes">
-      <button id="btnVoltar" onclick="voltarPainel()">Voltar</button>
-      <button id="btnSair" onclick="sair()">Sair</button>
+<!-- Modal de edição -->
+<div id="modal-editar" class="modal">
+  <div class="modal-content">
+    <h3>Editar Curso</h3>
+    <input type="hidden" id="edit-id">
+    <label>Título:</label>
+    <input type="text" id="edit-titulo">
+    <label>Descrição:</label>
+    <textarea id="edit-descricao"></textarea>
+    <label>URL:</label>
+    <input type="text" id="edit-url">
+    <div style="margin-top:10px;">
+      <button class="btn" onclick="salvarEdicao()">Salvar</button>
+      <button class="btn-danger" onclick="fecharModal()">Cancelar</button>
     </div>
   </div>
+</div>
+
 </body>
-  </html>
+      </html>
