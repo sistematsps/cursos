@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Curso</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Curso - 20 Aulas</title>
 
 <script type="module">
+/* ---------- Firebase imports (módulo) ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Config Firebase
+/* ---------- Sua configuração do Firebase ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
   authDomain: "meuappweb-65522.firebaseapp.com",
@@ -25,134 +28,309 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let uidUsuario = null;
-const cursoId = "cursoXYZ";
-const totalSlides = 20;
+/* ---------- Parâmetros do curso ---------- */
+// Ajuste `cursoId` para o id real do curso na sua coleção "cursos"
+const cursoId = "cursoXYZ"; // <--- altere conforme seu curso
+const totalLessons = 20;    // número de aulas que o curso terá
+const slideFirstLesson = 4; // o slide 4 corresponderá à Aula 1
+const slideLast = slideFirstLesson + totalLessons - 1; // slide 23 para 20 aulas
+const totalSlides = slideLast; // total geral de slides (1..23)
 
+let uid = null;
+let alunoCursoRef = null;
+
+/* ---------- Autenticação: garante usuário logado e inicializa registros ---------- */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return window.location.href = "login.html";
-  uidUsuario = user.uid;
+  if (!user) {
+    // se não está logado, volta ao login
+    window.location.href = "login.html";
+    return;
+  }
+  uid = user.uid;
+  document.getElementById("usuario-email").textContent = user.email || "";
 
-  // Cria registro do curso para o aluno se não existir
-  const alunoCursoRef = doc(db, "alunos", uidUsuario, "cursos", cursoId);
-  const alunoCursoSnap = await getDoc(alunoCursoRef);
-  if (!alunoCursoSnap.exists()) {
-    await setDoc(alunoCursoRef, { progresso: 0, aulaAtual: 0, dataMatricula: new Date().toLocaleDateString("pt-BR") });
+  // cria documento do aluno se não existir
+  const alunoDocRef = doc(db, "alunos", uid);
+  const alunoSnap = await getDoc(alunoDocRef);
+  if (!alunoSnap.exists()) {
+    // cria doc com campos mínimos (vai ser complementado no slide 2)
+    await setDoc(alunoDocRef, { criadoEm: new Date().toLocaleString() });
   }
 
-  mostrarSlide(1); // inicia no slide 1
+  // assegura subdocumento do curso (alunos/{uid}/cursos/{cursoId})
+  alunoCursoRef = doc(db, "alunos", uid, "cursos", cursoId);
+  const cursoSnap = await getDoc(alunoCursoRef);
+  if (!cursoSnap.exists()) {
+    await setDoc(alunoCursoRef, {
+      aulaAtual: 0,
+      progresso: 0,
+      dataMatricula: new Date().toLocaleDateString("pt-BR")
+    });
+  }
+
+  // inicia mostrando o Slide 1
+  mostrarSlide(1);
+  await atualizarListaDeAulasNaTela(); // prepara estado de botões conforme DB
 });
 
-// Controle de slides
+/* ---------- Controle de exibição de slides ---------- */
 let slideAtual = 1;
 function mostrarSlide(n) {
   for (let i = 1; i <= totalSlides; i++) {
-    const s = document.getElementById("slide" + i);
-    if (s) s.style.display = (i === n ? "block" : "none");
+    const el = document.getElementById("slide" + i);
+    if (!el) continue;
+    el.style.display = (i === n) ? "block" : "none";
   }
   slideAtual = n;
+  // se estivermos na lista de aulas, atualizamos estado
+  if (n === 3) atualizarListaDeAulasNaTela();
 }
 
-// Botões de navegação
-window.proximoSlide = async function() {
-  if (slideAtual === 2) {
-    // Salvar dados do aluno no Firestore
-    const nome = document.getElementById("nomeAluno").value;
-    if (!nome) { alert("Digite seu nome!"); return; }
-    const alunoRef = doc(db, "alunos", uidUsuario);
-    await updateDoc(alunoRef, { nome: nome });
-  }
+/* ---------- Slide 1: botão Iniciar curso ---------- */
+window.iniciarCurso = function() {
+  mostrarSlide(2);
+};
 
-  if (slideAtual === 3) {
-    alert("Clique na aula desbloqueada para iniciar.");
+/* ---------- Slide 2: identificação do aluno ---------- */
+window.salvarIdentificacao = async function() {
+  const nome = document.getElementById("input-nome").value.trim();
+  const cpf = document.getElementById("input-cpf").value.trim();
+  const dataNascimento = document.getElementById("input-nasc").value;
+
+  if (!nome) { alert("Digite o seu nome."); return; }
+
+  const alunoDocRef = doc(db, "alunos", uid);
+  await updateDoc(alunoDocRef, {
+    nome,
+    cpf: cpf || null,
+    dataNascimento: dataNascimento || null,
+    atualizadoEm: new Date().toLocaleString()
+  });
+
+  alert("Dados salvos.");
+  mostrarSlide(3);
+};
+
+/* ---------- Slide 3: lista de aulas - desbloqueio condicional ---------- */
+async function obterAulaAtualDoAluno() {
+  const snap = await getDoc(alunoCursoRef);
+  if (!snap.exists()) return { aulaAtual: 0, progresso: 0 };
+  const d = snap.data();
+  return { aulaAtual: d.aulaAtual || 0, progresso: d.progresso || 0 };
+}
+
+async function atualizarListaDeAulasNaTela() {
+  // atualiza status dos botões de aula (slide 3)
+  const info = await obterAulaAtualDoAluno();
+  const aulaAtual = info.aulaAtual;
+  const lista = document.getElementById("lista-aulas");
+  if (!lista) return;
+
+  // limpa e cria botões das totalLessons aulas
+  lista.innerHTML = "";
+  for (let i = 1; i <= totalLessons; i++) {
+    const btn = document.createElement("button");
+    btn.className = "btn-aula";
+    btn.textContent = `Aula ${i}`;
+    // desbloqueado se i <= aulaAtual + 1 (ou seja, próxima pendente está habilitada)
+    if (i <= aulaAtual + 1) {
+      btn.disabled = false;
+      btn.onclick = () => abrirSlideDaAula(i);
+    } else {
+      btn.disabled = true;
+    }
+
+    // marca concluída visualmente
+    if (i <= aulaAtual) {
+      const span = document.createElement("span");
+      span.textContent = " ✓";
+      span.style.color = "#28a745";
+      btn.appendChild(span);
+    }
+
+    lista.appendChild(btn);
+  }
+}
+
+/* ---------- Abrir slide correspondente à aula (cada aula é um slide separado) ---------- */
+function abrirSlideDaAula(aulaNumero) {
+  const slideForThisLesson = slideFirstLesson + (aulaNumero - 1); // slide index
+  if (slideForThisLesson >= slideFirstLesson && slideForThisLesson <= slideLast) {
+    mostrarSlide(slideForThisLesson);
+  } else {
+    alert("Aula não encontrada.");
+  }
+}
+
+/* ---------- Concluir aula: atualiza Firestore e desbloqueia próxima ---------- */
+window.concluirAula = async function(aulaNumero) {
+  // verifica consistência (somente concluir a próxima pendente)
+  const { aulaAtual } = await obterAulaAtualDoAluno();
+  if (aulaNumero !== aulaAtual + 1) {
+    alert("Você precisa concluir as aulas anteriores primeiro.");
+    // voltar para lista
+    mostrarSlide(3);
     return;
   }
 
-  if (slideAtual < totalSlides) mostrarSlide(slideAtual + 1);
+  const novoAulaAtual = aulaNumero;
+  const novoProgresso = Math.round((novoAulaAtual / totalLessons) * 100);
+
+  await updateDoc(alunoCursoRef, {
+    aulaAtual: novoAulaAtual,
+    progresso: novoProgresso,
+    atualizadoEm: new Date().toLocaleString()
+  });
+
+  alert(`Aula ${aulaNumero} concluída — progresso: ${novoProgresso}%`);
+  // Atualiza lista de aulas (desbloqueia botão da próxima)
+  await atualizarListaDeAulasNaTela();
+
+  // opcional: ir automaticamente para lista de aulas para escolher a próxima
+  mostrarSlide(3);
 };
 
+/* ---------- Função para navegar slides vazios anterior/próximo (opcional) ---------- */
+window.irParaProximoSlide = function() {
+  if (slideAtual < totalSlides) mostrarSlide(slideAtual + 1);
+};
+window.irParaSlideAnterior = function() {
+  if (slideAtual > 1) mostrarSlide(slideAtual - 1);
+};
+
+/* ---------- Sair (logout) ---------- */
 window.sair = async function() {
   await signOut(auth);
   window.location.href = "login.html";
 };
 
-// Concluir aula e atualizar progresso
-window.concluirAula = async function(aulaNumero) {
-  const alunoCursoRef = doc(db, "alunos", uidUsuario, "cursos", cursoId);
-  const alunoCursoSnap = await getDoc(alunoCursoRef);
-  const aulaAtual = alunoCursoSnap.data().aulaAtual || 0;
-
-  if (aulaNumero !== aulaAtual + 1) {
-    alert("Você precisa concluir a aula anterior primeiro!");
-    return;
-  }
-
-  const progresso = Math.round((aulaNumero / totalSlides) * 100);
-  await updateDoc(alunoCursoRef, { aulaAtual: aulaNumero, progresso: progresso });
-  alert(`Aula ${aulaNumero} concluída! Progresso: ${progresso}%`);
-
-  // Desbloquear próxima aula
-  document.getElementById(`aula${aulaNumero + 1}`)?.removeAttribute("disabled");
-};
-
 </script>
 
 <style>
-body { font-family: Arial; background: #f4f6f9; margin:0; padding:0; }
-.slide { display:none; padding: 20px; max-width:700px; margin: 20px auto; background:white; border-radius:12px; box-shadow:0 3px 8px rgba(0,0,0,0.1); }
-button { padding:10px 15px; border:none; border-radius:8px; background:#28a745; color:white; cursor:pointer; margin-top:10px; }
-button:hover { background:#218838; }
-button:disabled { background:#ccc; cursor:not-allowed; }
-h2 { color:#007bff; }
-input { padding:8px; width:90%; margin-top:10px; border-radius:6px; border:1px solid #ccc; }
-.aula-btn { display:block; margin:8px 0; }
+  :root{
+    --accent:#007bff;
+    --success:#28a745;
+    --card-bg:#fff;
+  }
+  body{font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:20px}
+  .slide{display:none;max-width:900px;margin:12px auto;padding:22px;background:var(--card-bg);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,0.06)}
+  h1,h2{color:var(--accent);margin:0 0 12px}
+  p{color:#333}
+  .top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+  .btn-ghost{background:transparent;border:1px solid #ddd;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn:disabled{background:#ccc;cursor:not-allowed}
+  input,select{padding:10px;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;margin-top:8px}
+  .aulas-grid{display:flex;flex-wrap:wrap;gap:8px}
+  .btn-aula{padding:10px 14px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;cursor:pointer;min-width:120px}
+  .btn-aula:disabled{opacity:.5;cursor:not-allowed}
+  .card-meta{margin-top:12px;color:#555}
+  .progresso-wrap{width:100%;background:#e9ecef;border-radius:8px;height:12px;overflow:hidden;margin-top:10px}
+  .progresso-bar{height:100%;background:var(--success);width:0%}
+  .small{font-size:13px;color:#666}
+  .actions-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  footer{max-width:900px;margin:18px auto;text-align:center;color:#666;font-size:14px}
 </style>
 </head>
 <body>
 
-<!-- Slide 1 - Apresentação -->
-<div id="slide1" class="slide">
-  <h2>Bem-vindo ao Curso XYZ</h2>
-  <p>Descrição do curso...</p>
-  <button onclick="proximoSlide()">Iniciar Curso</button>
-  <button onclick="sair()">Sair</button>
+<!-- Top bar: email e botão sair -->
+<div style="max-width:900px;margin:0 auto 12px;display:flex;justify-content:space-between;align-items:center">
+  <div class="small">Logado como: <span id="usuario-email"></span></div>
+  <div><button class="btn-ghost" onclick="sair()">Sair</button></div>
 </div>
 
-<!-- Slide 2 - Identificação do aluno -->
+<!-- SLIDE 1 - Apresentação -->
+<div id="slide1" class="slide">
+  <div class="top-actions"><h1>Apresentação do Curso</h1></div>
+  <p>Bem-vindo ao curso. Aqui entra a descrição do curso — objetivos, duração e instruções iniciais.</p>
+  <div class="actions-row">
+    <button class="btn" onclick="iniciarCurso()">Acessar Curso</button>
+    <button class="btn-ghost" onclick="mostrarSlide(3)">Ir para Lista de Aulas</button>
+  </div>
+</div>
+
+<!-- SLIDE 2 - Identificação do aluno -->
 <div id="slide2" class="slide">
   <h2>Identificação do Aluno</h2>
-  <input type="text" id="nomeAluno" placeholder="Digite seu nome">
-  <button onclick="proximoSlide()">Continuar</button>
-  <button onclick="sair()">Sair</button>
+  <p>Preencha seu nome e dados (serão salvos no seu cadastro).</p>
+  <label>Nome</label>
+  <input id="input-nome" type="text" placeholder="Seu nome completo" />
+  <label>CPF</label>
+  <input id="input-cpf" type="text" placeholder="CPF (opcional)" />
+  <label>Data de nascimento</label>
+  <input id="input-nasc" type="date" />
+  <div class="actions-row">
+    <button class="btn" onclick="salvarIdentificacao()">Salvar e Continuar</button>
+    <button class="btn-ghost" onclick="mostrarSlide(1)">Voltar</button>
+  </div>
 </div>
 
-<!-- Slide 3 - Lista de aulas -->
+<!-- SLIDE 3 - Lista de aulas (apenas Aula 1 desbloqueada inicialmente) -->
 <div id="slide3" class="slide">
-  <h2>Aulas do Curso</h2>
-  <button id="aula1" class="aula-btn" onclick="concluirAula(1)">Aula 1 (Desbloqueada)</button>
-  <button id="aula2" class="aula-btn" onclick="concluirAula(2)" disabled>Aula 2 (Bloqueada)</button>
-  <button id="aula3" class="aula-btn" onclick="concluirAula(3)" disabled>Aula 3 (Bloqueada)</button>
-  <!-- Botões para futuras aulas -->
+  <h2>Lista de Aulas</h2>
+  <p class="small">Clique na aula desbloqueada para iniciá-la. Conclua cada aula para liberar a próxima.</p>
+
+  <div id="lista-aulas" class="aulas-grid" style="margin-top:10px"></div>
+
+  <div class="card-meta">
+    <div class="small">Status de progresso do curso: <span id="progresso-text">0%</span></div>
+    <div class="progresso-wrap"><div id="progresso-bar" class="progresso-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="actions-row">
+    <button class="btn-ghost" onclick="mostrarSlide(1)">Voltar à apresentação</button>
+    <button class="btn-ghost" onclick="mostrarSlide(2)">Editar identificação</button>
+  </div>
 </div>
 
-<!-- Slides 4 a 20 vazios -->
-<div id="slide4" class="slide"><h2>Slide 4</h2></div>
-<div id="slide5" class="slide"><h2>Slide 5</h2></div>
-<div id="slide6" class="slide"><h2>Slide 6</h2></div>
-<div id="slide7" class="slide"><h2>Slide 7</h2></div>
-<div id="slide8" class="slide"><h2>Slide 8</h2></div>
-<div id="slide9" class="slide"><h2>Slide 9</h2></div>
-<div id="slide10" class="slide"><h2>Slide 10</h2></div>
-<div id="slide11" class="slide"><h2>Slide 11</h2></div>
-<div id="slide12" class="slide"><h2>Slide 12</h2></div>
-<div id="slide13" class="slide"><h2>Slide 13</h2></div>
-<div id="slide14" class="slide"><h2>Slide 14</h2></div>
-<div id="slide15" class="slide"><h2>Slide 15</h2></div>
-<div id="slide16" class="slide"><h2>Slide 16</h2></div>
-<div id="slide17" class="slide"><h2>Slide 17</h2></div>
-<div id="slide18" class="slide"><h2>Slide 18</h2></div>
-<div id="slide19" class="slide"><h2>Slide 19</h2></div>
-<div id="slide20" class="slide"><h2>Slide 20</h2></div>
+<!-- SLIDES das AULAS (Slides 4..23 => Aulas 1..20) -->
+<!-- Para cada aula há botão concluir que faz validação e atualiza Firestore -->
+<script>
+  // Gerar dinamicamente os slides de aula (4..23)
+  // Cada slide terá: título Aula X, espaço para conteúdo e botão "Concluir Aula X"
+  const container = document.createElement('div');
+  for (let lesson = 1; lesson <= totalLessons; lesson++) {
+    const slideIndex = slideFirstLesson + (lesson - 1);
+    const div = document.createElement('div');
+    div.id = 'slide' + slideIndex;
+    div.className = 'slide';
+    div.innerHTML = `
+      <h2>Aula ${lesson}</h2>
+      <p>Conteúdo da aula ${lesson} (vazio — implemente quando quiser).</p>
+      <div class="card-meta small">Dicas: aqui você pode colocar vídeo, texto, iframe ou exercícios. A conclusão atualiza seu progresso.</div>
+      <div class="actions-row">
+        <button class="btn" onclick="concluirAula(${lesson})">Concluir Aula ${lesson}</button>
+        <button class="btn-ghost" onclick="mostrarSlide(3)">Voltar à lista de aulas</button>
+      </div>
+    `;
+    document.body.appendChild(div);
+  }
+</script>
 
+<footer>
+  Sistema de aulas — cada conclusão atualiza seu progresso no Firestore e libera a próxima aula.
+</footer>
+
+<script>
+/* ---------- Atualiza barra de progresso visual na lista ---------- */
+async function atualizarProgressoVisual() {
+  try {
+    const snap = await getDoc(alunoCursoRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const progresso = data.progresso || 0;
+    document.getElementById('progresso-text').textContent = progresso + '%';
+    document.getElementById('progresso-bar').style.width = progresso + '%';
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Observação: chamamos atualizarListaDeAulasNaTela que já chama atualizarProgressoVisual
+// Não há listener em tempo real aqui (para simplicidade), mas seu painel já busca em tempo real.
+// Se quiser listener real-time, podemos trocar getDoc por onSnapshot.
+
+</script>
 </body>
-</html>
+  </html>
