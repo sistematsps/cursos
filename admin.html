@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Administrativo - Cursos</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // 🔧 Configuração Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
+    authDomain: "meuappweb-65522.firebaseapp.com",
+    projectId: "meuappweb-65522",
+    storageBucket: "meuappweb-65522.firebasestorage.app",
+    messagingSenderId: "305368794616",
+    appId: "1:305368794616:web:d987589863479e576ac20d",
+    measurementId: "G-L0VWMGJ003"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // 🔹 Protege a página — só admin logado pode acessar
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+    } else {
+      carregarCursos();
+    }
+  });
+
+  // 🔹 Cadastrar curso
+  window.cadastrarCurso = async function cadastrarCurso() {
+    const nome = document.getElementById("nome").value.trim();
+    const descricao = document.getElementById("descricao").value.trim();
+    const cargaHoraria = document.getElementById("cargaHoraria").value.trim();
+
+    if (!nome || !descricao || !cargaHoraria) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "cursos"), {
+        nome,
+        descricao,
+        cargaHoraria
+      });
+
+      alert("Curso cadastrado com sucesso!");
+      document.getElementById("formCurso").reset();
+      carregarCursos();
+    } catch (erro) {
+      console.error("Erro ao cadastrar curso:", erro);
+      alert("Erro ao cadastrar curso.");
+    }
+  };
+
+  // 🔹 Carregar cursos
+  async function carregarCursos() {
+    const lista = document.getElementById("listaCursos");
+    lista.innerHTML = "<p>Carregando cursos...</p>";
+
+    const querySnap = await getDocs(collection(db, "cursos"));
+    lista.innerHTML = "";
+
+    if (querySnap.empty) {
+      lista.innerHTML = "<p>Nenhum curso cadastrado ainda.</p>";
+      return;
+    }
+
+    querySnap.forEach((docSnap) => {
+      const curso = docSnap.data();
+      const item = document.createElement("li");
+      item.innerHTML = `
+        <strong>${curso.nome}</strong> <br>
+        <small>${curso.descricao}</small><br>
+        <em>Carga horária: ${curso.cargaHoraria}h</em><br>
+        <button onclick="excluirCurso('${docSnap.id}')">Excluir</button>
+      `;
+      lista.appendChild(item);
+    });
+  }
+
+  // 🔹 Excluir curso
+  window.excluirCurso = async function excluirCurso(id) {
+    if (confirm("Tem certeza que deseja excluir este curso?")) {
+      await deleteDoc(doc(db, "cursos", id));
+      alert("Curso excluído com sucesso!");
+      carregarCursos();
+    }
+  };
+
+  // 🔹 Sair
+  window.sair = async function sair() {
+    await signOut(auth);
+    window.location.href = "login.html";
+  };
+
+  // 🔹 Voltar ao painel
+  window.voltarPainel = function voltarPainel() {
+    window.location.href = "painel.html";
+  };
+</script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f6fa;
+    margin: 0;
+    padding: 0;
+  }
+
+  header {
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    padding: 15px;
+  }
+
+  .container {
+    max-width: 700px;
+    background: white;
+    margin: 30px auto;
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  h2 {
+    text-align: center;
+    color: #007bff;
+  }
+
+  label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    padding: 10px 15px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #btnCadastrar {
+    background-color: #28a745;
+    color: white;
+    width: 100%;
+  }
+
+  #btnCadastrar:hover {
+    background-color: #218838;
+  }
+
+  #btnVoltar {
+    background-color: #17a2b8;
+    color: white;
+    width: 48%;
+  }
+
+  #btnVoltar:hover {
+    background-color: #138496;
+  }
+
+  #btnSair {
+    background-color: #dc3545;
+    color: white;
+    width: 48%;
+  }
+
+  #btnSair:hover {
+    background-color: #c82333;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+  }
+
+  li {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+  }
+
+  li button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 5px;
+  }
+
+  li button:hover {
+    background-color: #c82333;
+  }
+
+  .acoes {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+  }
+</style>
+</head>
+
+<body>
+  <header>
+    <h1>Painel Administrativo - Cursos</h1>
+  </header>
+
+  <div class="container">
+    <h2>Cadastrar Novo Curso</h2>
+
+    <form id="formCurso">
+      <label>Nome do Curso</label>
+      <input type="text" id="nome" placeholder="Digite o nome do curso">
+
+      <label>Descrição</label>
+      <textarea id="descricao" rows="3" placeholder="Digite uma breve descrição"></textarea>
+
+      <label>Carga Horária (em horas)</label>
+      <input type="number" id="cargaHoraria" placeholder="Ex: 20">
+
+      <button id="btnCadastrar" type="button" onclick="cadastrarCurso()">Cadastrar Curso</button>
+    </form>
+
+    <h2 style="margin-top:30px;">Cursos Cadastrados</h2>
+    <ul id="listaCursos"></ul>
+
+    <div class="acoes">
+      <button id="btnVoltar" onclick="voltarPainel()">Voltar</button>
+      <button id="btnSair" onclick="sair()">Sair</button>
+    </div>
+  </div>
+</body>
+</html>
