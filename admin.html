@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel Administrativo</title>
 
 <script type="module">
@@ -10,7 +10,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-/* ------------------ CONFIGURAÇÃO FIREBASE ------------------ */
+/* ---------- Firebase Config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
   authDomain: "meuappweb-65522.firebaseapp.com",
@@ -24,12 +24,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* ------------------ CONTROLE DE LOGIN ------------------ */
+/* ---------- Controle de Login ---------- */
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "login.html";
   } else {
-    // Verificação simples de admin (poderemos aprimorar depois)
     if (user.email !== "admin@meuapp.com") {
       alert("Acesso restrito ao administrador.");
       signOut(auth);
@@ -45,15 +44,15 @@ window.sair = async () => {
   window.location.href = "login.html";
 };
 
-/* ------------------ CADASTRO DE CURSO ------------------ */
+/* ---------- Cadastro de Curso ---------- */
 document.getElementById("form-curso").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const titulo = document.getElementById("titulo").value;
+  const nome = document.getElementById("nome").value;
   const descricao = document.getElementById("descricao").value;
   const url = document.getElementById("url").value;
 
   await addDoc(collection(db, "cursos"), {
-    titulo,
+    nome,
     descricao,
     url,
     criadoEm: new Date().toLocaleString()
@@ -64,7 +63,7 @@ document.getElementById("form-curso").addEventListener("submit", async (e) => {
   carregarCursos();
 });
 
-/* ------------------ LISTAR CURSOS ------------------ */
+/* ---------- Listar Cursos ---------- */
 async function carregarCursos() {
   const lista = document.getElementById("lista-cursos");
   lista.innerHTML = "";
@@ -75,20 +74,20 @@ async function carregarCursos() {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `
-      <h3>${curso.titulo}</h3>
+      <h3>${curso.nome}</h3>
       <p>${curso.descricao}</p>
       <small><b>URL:</b> ${curso.url}</small><br>
-      <button class="btn" onclick="editarCurso('${docSnap.id}', '${curso.titulo}', '${curso.descricao}', '${curso.url}')">Editar</button>
+      <button class="btn" onclick="editarCurso('${docSnap.id}', '${curso.nome}', '${curso.descricao}', '${curso.url}')">Editar</button>
       <button class="btn-danger" onclick="excluirCurso('${docSnap.id}')">Excluir</button>
     `;
     lista.appendChild(div);
   });
 }
 
-/* ------------------ EDITAR CURSO ------------------ */
-window.editarCurso = (id, titulo, descricao, url) => {
+/* ---------- Editar Curso ---------- */
+window.editarCurso = (id, nome, descricao, url) => {
   document.getElementById("edit-id").value = id;
-  document.getElementById("edit-titulo").value = titulo;
+  document.getElementById("edit-nome").value = nome;
   document.getElementById("edit-descricao").value = descricao;
   document.getElementById("edit-url").value = url;
   document.getElementById("modal-editar").style.display = "flex";
@@ -96,13 +95,13 @@ window.editarCurso = (id, titulo, descricao, url) => {
 
 window.salvarEdicao = async () => {
   const id = document.getElementById("edit-id").value;
-  const titulo = document.getElementById("edit-titulo").value;
+  const nome = document.getElementById("edit-nome").value;
   const descricao = document.getElementById("edit-descricao").value;
   const url = document.getElementById("edit-url").value;
 
   const ref = doc(db, "cursos", id);
   await updateDoc(ref, {
-    titulo,
+    nome,
     descricao,
     url,
     atualizadoEm: new Date().toLocaleString()
@@ -117,7 +116,7 @@ window.fecharModal = () => {
   document.getElementById("modal-editar").style.display = "none";
 };
 
-/* ------------------ EXCLUIR CURSO ------------------ */
+/* ---------- Excluir Curso ---------- */
 window.excluirCurso = async (id) => {
   if (confirm("Tem certeza que deseja excluir este curso?")) {
     await deleteDoc(doc(db, "cursos", id));
@@ -128,7 +127,7 @@ window.excluirCurso = async (id) => {
 </script>
 
 <style>
-body { font-family: Arial, sans-serif; background:#f4f6f9; margin:0; padding:20px; }
+body { font-family: Arial; background:#f4f6f9; margin:0; padding:20px; }
 header { display:flex; justify-content:space-between; align-items:center; }
 h1 { color:#007bff; }
 form { background:white; padding:20px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); margin-bottom:30px; }
@@ -154,14 +153,14 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
 
 <h2>Cadastrar Novo Curso</h2>
 <form id="form-curso">
-  <label>Título do Curso</label>
-  <input type="text" id="titulo" required>
+  <label>Nome do Curso</label>
+  <input type="text" id="nome" required>
 
   <label>Descrição</label>
   <textarea id="descricao" required></textarea>
 
   <label>URL do Curso</label>
-  <input type="text" id="url" required>
+  <input type="text" id="url" placeholder="Ex: curso.html?id=matematica" required>
 
   <button type="submit" class="btn">Cadastrar Curso</button>
 </form>
@@ -174,12 +173,12 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
   <div class="modal-content">
     <h3>Editar Curso</h3>
     <input type="hidden" id="edit-id">
-    <label>Título:</label>
-    <input type="text" id="edit-titulo">
+    <label>Nome:</label>
+    <input type="text" id="edit-nome">
     <label>Descrição:</label>
     <textarea id="edit-descricao"></textarea>
     <label>URL:</label>
-    <input type="text" id="edit-url">
+    <input type="text" id="edit-url" placeholder="Ex: curso.html?id=matematica">
     <div style="margin-top:10px;">
       <button class="btn" onclick="salvarEdicao()">Salvar</button>
       <button class="btn-danger" onclick="fecharModal()">Cancelar</button>
@@ -188,4 +187,4 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
 </div>
 
 </body>
-      </html>
+</html>
