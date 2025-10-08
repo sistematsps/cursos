@@ -9,7 +9,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   // 🔧 Configuração Firebase
   const firebaseConfig = {
@@ -33,13 +33,33 @@
     if (user) {
       uidUsuario = user.uid;
       document.getElementById("alunoEmail").textContent = user.email;
-      carregarCursosMatriculados();
+      await carregarDadosAluno();
+      await carregarCursosMatriculados();
     } else {
       window.location.href = "login.html";
     }
   });
 
-  // 🔹 Carrega cursos matriculados pelo aluno
+  // 🔹 Carregar dados pessoais do aluno
+  async function carregarDadosAluno() {
+    const alunoRef = doc(db, "alunos", uidUsuario);
+    const alunoSnap = await getDoc(alunoRef);
+
+    if (alunoSnap.exists()) {
+      const aluno = alunoSnap.data();
+      document.getElementById("dadosAluno").innerHTML = `
+        <p><strong>Nome:</strong> ${aluno.nome || "—"}</p>
+        <p><strong>CPF:</strong> ${aluno.cpf || "—"}</p>
+        <p><strong>Data de Nascimento:</strong> ${aluno.dataNascimento || "—"}</p>
+        <p><strong>Nome do Pai:</strong> ${aluno.nomePai || "—"}</p>
+        <p><strong>Nome da Mãe:</strong> ${aluno.nomeMae || "—"}</p>
+      `;
+    } else {
+      document.getElementById("dadosAluno").innerHTML = "<p>Dados do aluno não encontrados.</p>";
+    }
+  }
+
+  // 🔹 Carregar cursos matriculados pelo aluno
   async function carregarCursosMatriculados() {
     const container = document.getElementById("cursosMatriculados");
     container.innerHTML = "<p>Carregando seus cursos...</p>";
@@ -56,17 +76,25 @@
       const curso = cursoDoc.data();
       const cursoId = cursoDoc.id;
 
-      // Buscar dados do curso original (para pegar URL e descrição)
+      // Buscar curso original (para pegar URL e descrição)
       const cursoOriginalRef = doc(db, "cursos", cursoId);
       const cursoOriginalSnap = await getDoc(cursoOriginalRef);
       const cursoOriginal = cursoOriginalSnap.exists() ? cursoOriginalSnap.data() : {};
+
+      const progresso = curso.progresso || 0;
 
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
         <h3>${curso.nome}</h3>
         <p><strong>Carga horária:</strong> ${cursoOriginal.cargaHoraria || "N/A"}h</p>
-        <p><strong>Data de matrícula:</strong> ${curso.dataMatricula}</p>
+        <p><strong>Data de matrícula:</strong> ${curso.dataMatricula || "—"}</p>
+
+        <div class="barra-progresso">
+          <div class="progresso" style="width: ${progresso}%;"></div>
+        </div>
+        <p class="percentual">${progresso}% concluído</p>
+
         ${
           cursoOriginal.url
             ? `<a href="${cursoOriginal.url}" target="_blank"><button>Acessar Curso</button></a>`
@@ -114,6 +142,14 @@
     text-align: center;
   }
 
+  .dados-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+  }
+
   .cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -134,6 +170,25 @@
 
   .card p {
     color: #555;
+  }
+
+  .barra-progresso {
+    width: 100%;
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+
+  .progresso {
+    height: 10px;
+    background-color: #28a745;
+    border-radius: 5px;
+  }
+
+  .percentual {
+    font-size: 14px;
+    color: #666;
   }
 
   button {
@@ -179,6 +234,11 @@
       Logado como: <span id="alunoEmail"></span>
     </div>
 
+    <div class="dados-box">
+      <h2>Meus Dados Pessoais</h2>
+      <div id="dadosAluno"></div>
+    </div>
+
     <h2>Meus Cursos</h2>
     <div id="cursosMatriculados" class="cards"></div>
 
@@ -188,4 +248,4 @@
     </div>
   </div>
 </body>
-</html>
+                                                                         </html>
