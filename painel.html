@@ -9,9 +9,9 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // 🔧 Configuração do Firebase (a mesma usada no cadastro e login)
+  // 🔧 Configuração do Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
     authDomain: "meuappweb-65522.firebaseapp.com",
@@ -26,37 +26,62 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // 🔹 Verifica se o usuário está logado
+  // 🔹 Carrega dados do aluno e cursos
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // Usuário logado, pega dados do Firestore
       const uid = user.uid;
-      const docRef = doc(db, "alunos", uid);
-      const docSnap = await getDoc(docRef);
+      const alunoRef = doc(db, "alunos", uid);
+      const alunoSnap = await getDoc(alunoRef);
 
-      if (docSnap.exists()) {
-        const dados = docSnap.data();
+      if (alunoSnap.exists()) {
+        const dados = alunoSnap.data();
         document.getElementById("nomeAluno").textContent = dados.nome;
         document.getElementById("emailAluno").textContent = dados.email;
         document.getElementById("cpfAluno").textContent = dados.cpf;
         document.getElementById("dataCadastro").textContent = dados.dataCadastro;
         document.getElementById("dataNascimento").textContent = dados.dataNascimento || "Não informado";
-        document.getElementById("nomePai").textContent = dados.nomePai || "Não informado";
-        document.getElementById("nomeMae").textContent = dados.nomeMae || "Não informado";
-      } else {
-        alert("Dados do aluno não encontrados.");
       }
+
+      // 🔹 Busca cursos matriculados
+      const cursosRef = collection(db, "alunos", uid, "cursos");
+      const cursosSnap = await getDocs(cursosRef);
+      const lista = document.getElementById("listaCursos");
+      lista.innerHTML = "";
+
+      if (cursosSnap.empty) {
+        lista.innerHTML = "<p>Nenhum curso matriculado.</p>";
+      } else {
+        cursosSnap.forEach((docCurso) => {
+          const curso = docCurso.data();
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <strong>${curso.nome}</strong> — Progresso: ${curso.progresso || 0}%<br>
+            <button onclick="emitirCertificado('${curso.nome}')">Emitir Certificado</button>
+          `;
+          lista.appendChild(item);
+        });
+      }
+
     } else {
-      // Se não estiver logado, redireciona para login
       window.location.href = "login.html";
     }
   });
 
-  // 🔹 Função de sair
+  // 🔹 Função sair
   window.sair = async function sair() {
     await signOut(auth);
     localStorage.removeItem("alunoUID");
     window.location.href = "login.html";
+  };
+
+  // 🔹 Função emitir certificado (exemplo simples)
+  window.emitirCertificado = function emitirCertificado(nomeCurso) {
+    alert(`Certificado de conclusão do curso "${nomeCurso}" gerado com sucesso!`);
+  };
+
+  // 🔹 Ir para página de cursos disponíveis
+  window.irParaCursos = function irParaCursos() {
+    window.location.href = "cursos.html";
   };
 </script>
 
@@ -76,7 +101,7 @@
   }
 
   .container {
-    max-width: 600px;
+    max-width: 700px;
     background: white;
     margin: 40px auto;
     padding: 20px 30px;
@@ -90,48 +115,89 @@
   }
 
   .info {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
   }
 
   .info label {
     font-weight: bold;
-    color: #555;
+    color: #333;
   }
 
   button {
-    width: 100%;
-    padding: 12px;
-    background-color: #dc3545;
+    padding: 10px 15px;
     border: none;
     border-radius: 8px;
-    color: white;
-    font-size: 16px;
     cursor: pointer;
+    font-size: 15px;
+    margin-top: 10px;
   }
 
-  button:hover {
+  #btnCursos {
+    background-color: #28a745;
+    color: white;
+    width: 100%;
+  }
+
+  #btnCursos:hover {
+    background-color: #218838;
+  }
+
+  #btnSair {
+    background-color: #dc3545;
+    color: white;
+    width: 100%;
+  }
+
+  #btnSair:hover {
     background-color: #c82333;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    background: #f8f9fa;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+  }
+
+  li button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+
+  li button:hover {
+    background-color: #0056b3;
   }
 </style>
 </head>
 
 <body>
   <header>
-    <h1>Bem-vindo ao Painel do Aluno</h1>
+    <h1>Painel do Aluno</h1>
   </header>
 
   <div class="container">
-    <h2>Seus Dados</h2>
+    <h2>Bem-vindo, <span id="nomeAluno"></span>!</h2>
 
-    <div class="info"><label>Nome:</label> <span id="nomeAluno"></span></div>
     <div class="info"><label>Email:</label> <span id="emailAluno"></span></div>
     <div class="info"><label>CPF:</label> <span id="cpfAluno"></span></div>
     <div class="info"><label>Data de Nascimento:</label> <span id="dataNascimento"></span></div>
-    <div class="info"><label>Nome do Pai:</label> <span id="nomePai"></span></div>
-    <div class="info"><label>Nome da Mãe:</label> <span id="nomeMae"></span></div>
     <div class="info"><label>Data de Cadastro:</label> <span id="dataCadastro"></span></div>
 
-    <button onclick="sair()">Sair</button>
+    <hr>
+    <h2>Meus Cursos</h2>
+    <ul id="listaCursos"></ul>
+
+    <button id="btnCursos" onclick="irParaCursos()">Ver Cursos Disponíveis</button>
+    <button id="btnSair" onclick="sair()">Sair</button>
   </div>
 </body>
-  </html>
+</html>
