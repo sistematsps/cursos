@@ -8,10 +8,10 @@
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // 🔧 Configuração do Firebase
+  // 🔧 Configuração Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
     authDomain: "meuappweb-65522.firebaseapp.com",
@@ -26,61 +26,65 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // 🔹 Carrega dados do aluno e cursos
+  let uidUsuario = null;
+
+  // 🔹 Verifica se o aluno está logado
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      const uid = user.uid;
-      const alunoRef = doc(db, "alunos", uid);
-      const alunoSnap = await getDoc(alunoRef);
-
-      if (alunoSnap.exists()) {
-        const dados = alunoSnap.data();
-        document.getElementById("nomeAluno").textContent = dados.nome;
-        document.getElementById("emailAluno").textContent = dados.email;
-        document.getElementById("cpfAluno").textContent = dados.cpf;
-        document.getElementById("dataCadastro").textContent = dados.dataCadastro;
-        document.getElementById("dataNascimento").textContent = dados.dataNascimento || "Não informado";
-      }
-
-      // 🔹 Busca cursos matriculados
-      const cursosRef = collection(db, "alunos", uid, "cursos");
-      const cursosSnap = await getDocs(cursosRef);
-      const lista = document.getElementById("listaCursos");
-      lista.innerHTML = "";
-
-      if (cursosSnap.empty) {
-        lista.innerHTML = "<p>Nenhum curso matriculado.</p>";
-      } else {
-        cursosSnap.forEach((docCurso) => {
-          const curso = docCurso.data();
-          const item = document.createElement("li");
-          item.innerHTML = `
-            <strong>${curso.nome}</strong> — Progresso: ${curso.progresso || 0}%<br>
-            <button onclick="emitirCertificado('${curso.nome}')">Emitir Certificado</button>
-          `;
-          lista.appendChild(item);
-        });
-      }
-
+      uidUsuario = user.uid;
+      document.getElementById("alunoEmail").textContent = user.email;
+      carregarCursosMatriculados();
     } else {
       window.location.href = "login.html";
     }
   });
 
-  // 🔹 Função sair
+  // 🔹 Carrega cursos matriculados pelo aluno
+  async function carregarCursosMatriculados() {
+    const container = document.getElementById("cursosMatriculados");
+    container.innerHTML = "<p>Carregando seus cursos...</p>";
+
+    const cursosSnap = await getDocs(collection(db, "alunos", uidUsuario, "cursos"));
+    container.innerHTML = "";
+
+    if (cursosSnap.empty) {
+      container.innerHTML = "<p>Você ainda não está matriculado em nenhum curso.</p>";
+      return;
+    }
+
+    for (const cursoDoc of cursosSnap.docs) {
+      const curso = cursoDoc.data();
+      const cursoId = cursoDoc.id;
+
+      // Buscar dados do curso original (para pegar URL e descrição)
+      const cursoOriginalRef = doc(db, "cursos", cursoId);
+      const cursoOriginalSnap = await getDoc(cursoOriginalRef);
+      const cursoOriginal = cursoOriginalSnap.exists() ? cursoOriginalSnap.data() : {};
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <h3>${curso.nome}</h3>
+        <p><strong>Carga horária:</strong> ${cursoOriginal.cargaHoraria || "N/A"}h</p>
+        <p><strong>Data de matrícula:</strong> ${curso.dataMatricula}</p>
+        ${
+          cursoOriginal.url
+            ? `<a href="${cursoOriginal.url}" target="_blank"><button>Acessar Curso</button></a>`
+            : `<button disabled>Curso sem link disponível</button>`
+        }
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  // 🔹 Botão Sair
   window.sair = async function sair() {
     await signOut(auth);
-    localStorage.removeItem("alunoUID");
     window.location.href = "login.html";
   };
 
-  // 🔹 Função emitir certificado (exemplo simples)
-  window.emitirCertificado = function emitirCertificado(nomeCurso) {
-    alert(`Certificado de conclusão do curso "${nomeCurso}" gerado com sucesso!`);
-  };
-
-  // 🔹 Ir para página de cursos disponíveis
-  window.irParaCursos = function irParaCursos() {
+  // 🔹 Botão Voltar
+  window.voltarCursos = function voltarCursos() {
     window.location.href = "cursos.html";
   };
 </script>
@@ -88,116 +92,100 @@
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-color: #f5f6fa;
+    background-color: #f4f6f9;
     margin: 0;
-    padding: 0;
   }
 
   header {
     background-color: #007bff;
     color: white;
-    padding: 15px;
     text-align: center;
+    padding: 15px;
   }
 
   .container {
-    max-width: 700px;
-    background: white;
-    margin: 40px auto;
-    padding: 20px 30px;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 20px;
   }
 
   h2 {
+    color: #007bff;
     text-align: center;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .card h3 {
     color: #007bff;
   }
 
-  .info {
-    margin-bottom: 10px;
-  }
-
-  .info label {
-    font-weight: bold;
-    color: #333;
+  .card p {
+    color: #555;
   }
 
   button {
-    padding: 10px 15px;
+    padding: 8px 15px;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    margin-top: 10px;
-  }
-
-  #btnCursos {
     background-color: #28a745;
     color: white;
-    width: 100%;
+    margin-top: 10px;
+    cursor: pointer;
   }
 
-  #btnCursos:hover {
+  button:hover {
     background-color: #218838;
   }
 
-  #btnSair {
-    background-color: #dc3545;
-    color: white;
-    width: 100%;
+  .acoes {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
   }
 
-  #btnSair:hover {
-    background-color: #c82333;
-  }
+  #btnVoltar { background-color: #17a2b8; }
+  #btnVoltar:hover { background-color: #138496; }
 
-  ul {
-    list-style: none;
-    padding: 0;
-  }
+  #btnSair { background-color: #dc3545; }
+  #btnSair:hover { background-color: #c82333; }
 
-  li {
-    background: #f8f9fa;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-  }
-
-  li button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 5px;
-    margin-top: 5px;
-  }
-
-  li button:hover {
-    background-color: #0056b3;
+  #infoAluno {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #666;
   }
 </style>
 </head>
 
 <body>
-  <header>
-    <h1>Painel do Aluno</h1>
-  </header>
+  <header><h1>Painel do Aluno</h1></header>
 
   <div class="container">
-    <h2>Bem-vindo, <span id="nomeAluno"></span>!</h2>
+    <div id="infoAluno">
+      Logado como: <span id="alunoEmail"></span>
+    </div>
 
-    <div class="info"><label>Email:</label> <span id="emailAluno"></span></div>
-    <div class="info"><label>CPF:</label> <span id="cpfAluno"></span></div>
-    <div class="info"><label>Data de Nascimento:</label> <span id="dataNascimento"></span></div>
-    <div class="info"><label>Data de Cadastro:</label> <span id="dataCadastro"></span></div>
-
-    <hr>
     <h2>Meus Cursos</h2>
-    <ul id="listaCursos"></ul>
+    <div id="cursosMatriculados" class="cards"></div>
 
-    <button id="btnCursos" onclick="irParaCursos()">Ver Cursos Disponíveis</button>
-    <button id="btnSair" onclick="sair()">Sair</button>
+    <div class="acoes">
+      <button id="btnVoltar" onclick="voltarCursos()">Ver outros cursos</button>
+      <button id="btnSair" onclick="sair()">Sair</button>
+    </div>
   </div>
 </body>
 </html>
