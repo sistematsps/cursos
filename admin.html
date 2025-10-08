@@ -40,8 +40,9 @@
     const nome = document.getElementById("nome").value.trim();
     const descricao = document.getElementById("descricao").value.trim();
     const cargaHoraria = document.getElementById("cargaHoraria").value.trim();
+    const url = document.getElementById("url").value.trim();
 
-    if (!nome || !descricao || !cargaHoraria) {
+    if (!nome || !descricao || !cargaHoraria || !url) {
       alert("Preencha todos os campos!");
       return;
     }
@@ -50,7 +51,8 @@
       await addDoc(collection(db, "cursos"), {
         nome,
         descricao,
-        cargaHoraria
+        cargaHoraria,
+        url
       });
 
       alert("Curso cadastrado com sucesso!");
@@ -79,9 +81,10 @@
       const curso = docSnap.data();
       const item = document.createElement("li");
       item.innerHTML = `
-        <strong>${curso.nome}</strong> <br>
+        <strong>${curso.nome}</strong><br>
         <small>${curso.descricao}</small><br>
         <em>Carga horária: ${curso.cargaHoraria}h</em><br>
+        <a href="${curso.url}" target="_blank">${curso.url}</a><br>
         <button onclick="excluirCurso('${docSnap.id}')">Excluir</button>
       `;
       lista.appendChild(item);
@@ -97,13 +100,12 @@
     }
   };
 
-  // 🔹 Sair
+  // 🔹 Sair e voltar
   window.sair = async function sair() {
     await signOut(auth);
     window.location.href = "login.html";
   };
 
-  // 🔹 Voltar ao painel
   window.voltarPainel = function voltarPainel() {
     window.location.href = "painel.html";
   };
@@ -170,26 +172,6 @@
     background-color: #218838;
   }
 
-  #btnVoltar {
-    background-color: #17a2b8;
-    color: white;
-    width: 48%;
-  }
-
-  #btnVoltar:hover {
-    background-color: #138496;
-  }
-
-  #btnSair {
-    background-color: #dc3545;
-    color: white;
-    width: 48%;
-  }
-
-  #btnSair:hover {
-    background-color: #c82333;
-  }
-
   ul {
     list-style: none;
     padding: 0;
@@ -204,18 +186,14 @@
     border: 1px solid #ddd;
   }
 
-  li button {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-top: 5px;
+  li a {
+    color: #007bff;
+    text-decoration: none;
+    word-break: break-all;
   }
 
-  li button:hover {
-    background-color: #c82333;
+  li a:hover {
+    text-decoration: underline;
   }
 
   .acoes {
@@ -223,13 +201,16 @@
     justify-content: space-between;
     margin-top: 15px;
   }
+
+  #btnVoltar { background-color: #17a2b8; color: white; width: 48%; }
+  #btnVoltar:hover { background-color: #138496; }
+  #btnSair { background-color: #dc3545; color: white; width: 48%; }
+  #btnSair:hover { background-color: #c82333; }
 </style>
 </head>
 
 <body>
-  <header>
-    <h1>Painel Administrativo - Cursos</h1>
-  </header>
+  <header><h1>Painel Administrativo - Cursos</h1></header>
 
   <div class="container">
     <h2>Cadastrar Novo Curso</h2>
@@ -244,6 +225,9 @@
       <label>Carga Horária (em horas)</label>
       <input type="number" id="cargaHoraria" placeholder="Ex: 20">
 
+      <label>URL do Curso</label>
+      <input type="url" id="url" placeholder="https://seudominio.com/curso1.html">
+
       <button id="btnCadastrar" type="button" onclick="cadastrarCurso()">Cadastrar Curso</button>
     </form>
 
@@ -256,4 +240,4 @@
     </div>
   </div>
 </body>
-</html>
+  </html>
