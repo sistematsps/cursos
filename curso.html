@@ -1,211 +1,148 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Curso - 20 Aulas</title>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { 
-  getFirestore, doc, getDoc, setDoc, updateDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-/* ---------- Firebase Config ---------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
-  authDomain: "meuappweb-65522.firebaseapp.com",
-  projectId: "meuappweb-65522",
-  storageBucket: "meuappweb-65522.firebasestorage.app",
-  messagingSenderId: "305368794616",
-  appId: "1:305368794616:web:d987589863479e576ac20d",
-  measurementId: "G-L0VWMGJ003"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const cursoId = "cursoXYZ"; // substitua pelo ID real do curso
-const totalAulas = 20;
-const primeiroSlideAula = 3;
-const ultimoSlide = primeiroSlideAula + totalAulas - 1;
-let uid = null;
-let alunoCursoRef = null;
-let alunoNome = "";
-
-/* ---------- Autenticação ---------- */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  uid = user.uid;
-  document.getElementById("usuario-email").textContent = user.email;
-
-  // Pega os dados do aluno
-  const alunoRef = doc(db, "alunos", uid);
-  const alunoSnap = await getDoc(alunoRef);
-  if (alunoSnap.exists()) {
-    alunoNome = alunoSnap.data().nome || "Aluno";
-    document.getElementById("nome-aluno").textContent = alunoNome;
-  }
-
-  // Cria referência do curso do aluno
-  alunoCursoRef = doc(db, "alunos", uid, "cursos", cursoId);
-  const cursoSnap = await getDoc(alunoCursoRef);
-  if (!cursoSnap.exists()) {
-    await setDoc(alunoCursoRef, {
-      aulaAtual: 0,
-      progresso: 0,
-      dataMatricula: new Date().toLocaleDateString("pt-BR"),
-    });
-  }
-
-  mostrarSlide(1);
-  atualizarListaDeAulas();
-});
-
-/* ---------- Controle de slides ---------- */
-let slideAtual = 1;
-function mostrarSlide(n) {
-  for (let i = 1; i <= ultimoSlide; i++) {
-    const el = document.getElementById("slide" + i);
-    if (el) el.style.display = (i === n) ? "block" : "none";
-  }
-  slideAtual = n;
-}
-
-/* ---------- Funções principais ---------- */
-window.iniciarCurso = () => mostrarSlide(2);
-
-async function obterProgresso() {
-  const snap = await getDoc(alunoCursoRef);
-  return snap.exists() ? snap.data() : { aulaAtual: 0, progresso: 0 };
-}
-
-async function atualizarListaDeAulas() {
-  const { aulaAtual, progresso } = await obterProgresso();
-  const lista = document.getElementById("lista-aulas");
-  lista.innerHTML = "";
-
-  for (let i = 1; i <= totalAulas; i++) {
-    const btn = document.createElement("button");
-    btn.className = "btn-aula";
-    btn.textContent = `Aula ${i}`;
-    btn.disabled = i > aulaAtual + 1;
-    btn.onclick = () => mostrarSlide(primeiroSlideAula + (i - 1));
-
-    if (i <= aulaAtual) {
-      btn.classList.add("concluida");
-      btn.textContent += " ✓";
-    }
-
-    lista.appendChild(btn);
-  }
-
-  document.getElementById("progresso-text").textContent = progresso + "%";
-  document.getElementById("progresso-bar").style.width = progresso + "%";
-}
-
-window.finalizarAula = async (numAula) => {
-  const { aulaAtual } = await obterProgresso();
-
-  if (numAula !== aulaAtual + 1 && numAula !== aulaAtual) {
-    alert("Finalize as aulas anteriores primeiro!");
-    return;
-  }
-
-  const novaAulaAtual = Math.max(numAula, aulaAtual);
-  const novoProgresso = Math.round((novaAulaAtual / totalAulas) * 100);
-
-  await updateDoc(alunoCursoRef, {
-    aulaAtual: novaAulaAtual,
-    progresso: novoProgresso,
-    atualizadoEm: new Date().toLocaleString()
-  });
-
-  alert(`Aula ${numAula} concluída! Seu progresso agora é ${novoProgresso}%.`);
-  atualizarListaDeAulas();
-  mostrarSlide(2);
-};
-
-window.sair = async () => {
-  await signOut(auth);
-  window.location.href = "login.html";
-};
-</script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curso Interativo - 20 Aulas</title>
 <style>
-body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
-.slide { display: none; background: white; max-width: 800px; margin: auto; padding: 25px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
-h1, h2 { color: #007bff; }
-.btn { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
-.btn:hover { background: #0056b3; }
-.btn-ghost { background: transparent; border: 1px solid #ccc; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-.btn-aula { display: inline-block; margin: 5px; padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; background: white; cursor: pointer; }
-.btn-aula:disabled { background: #eee; cursor: not-allowed; }
-.btn-aula.concluida { background: #28a745; color: white; }
-.progresso-wrap { background: #e9ecef; height: 12px; border-radius: 8px; overflow: hidden; margin-top: 10px; }
-.progresso-bar { background: #28a745; height: 100%; width: 0%; transition: width .4s; }
-footer { text-align: center; color: #666; margin-top: 20px; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #f7f8fa;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+  .slide {
+    display: none;
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  }
+  .ativo {
+    display: block;
+  }
+  button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  .logout {
+    background-color: #dc3545;
+  }
 </style>
 </head>
 <body>
 
-<div style="max-width:800px;margin:auto;display:flex;justify-content:space-between;align-items:center;">
-  <span id="usuario-email" class="small"></span>
-  <button class="btn-ghost" onclick="sair()">Sair</button>
+<!-- SLIDE 0 - Descrição do Curso -->
+<div id="slide0" class="slide ativo">
+  <h2>Bem-vindo ao Curso Interativo</h2>
+  <p>Este curso possui 20 aulas. Avance após concluir cada uma delas para gerar seu relatório final.</p>
+  <button onclick="mostrarSlide(1)">Acessar Curso</button>
 </div>
 
-<!-- SLIDE 1 - Apresentação -->
+<!-- SLIDE 1 - Login -->
 <div id="slide1" class="slide">
-  <h1>Apresentação do Curso</h1>
-  <p>Bem-vindo, <strong id="nome-aluno"></strong>!</p>
-  <p>Este é o início da sua jornada neste curso. Clique abaixo para começar.</p>
-  <button class="btn" onclick="iniciarCurso()">Acessar Curso</button>
+  <h2>Login do Aluno</h2>
+  <input type="text" id="nomeAluno" placeholder="Digite seu nome"><br><br>
+  <button onclick="fazerLogin()">Entrar</button>
 </div>
 
 <!-- SLIDE 2 - Lista de Aulas -->
 <div id="slide2" class="slide">
-  <h2>Lista de Aulas</h2>
-  <p>Conclua cada aula para desbloquear a próxima.</p>
-  <div id="lista-aulas"></div>
-
-  <div style="margin-top:20px;">
-    <p>Progresso atual: <span id="progresso-text">0%</span></p>
-    <div class="progresso-wrap">
-      <div id="progresso-bar" class="progresso-bar"></div>
-    </div>
-  </div>
-
-  <button class="btn-ghost" onclick="mostrarSlide(1)" style="margin-top:20px;">Voltar à apresentação</button>
+  <h2>Suas Aulas</h2>
+  <div id="listaAulas"></div>
+  <button class="logout" onclick="mostrarSlide(0)">Sair</button>
 </div>
 
-<!-- SLIDES DAS AULAS -->
+<!-- SLIDES 3 a 19 - Aulas -->
 <script>
-  const totalAulas = 20;
-  const primeiroSlideAula = 3;
-
-  for (let i = 1; i <= totalAulas; i++) {
-    const slide = document.createElement("div");
-    slide.id = "slide" + (primeiroSlideAula + i - 1);
-    slide.className = "slide";
-    slide.innerHTML = `
-      <h2>Aula ${i}</h2>
-      <p>Conteúdo da Aula ${i} — insira aqui vídeos, textos, ou atividades.</p>
-      <button class="btn" onclick="finalizarAula(${i})">Finalizar Aula ${i}</button>
-      <button class="btn-ghost" onclick="mostrarSlide(2)">Voltar à Lista de Aulas</button>
-    `;
-    document.body.appendChild(slide);
+  for(let i=3; i<=19; i++){
+    document.write(`
+      <div id="slide${i}" class="slide">
+        <h2>Aula ${i-2}</h2>
+        <p>Conteúdo da aula ${i-2}.</p>
+        <button onclick="concluirAula(${i})">Concluir Aula</button>
+        <button class="logout" onclick="mostrarSlide(0)">Sair</button>
+      </div>
+    `);
   }
 </script>
 
-<footer>
-  Seu progresso será salvo automaticamente no painel do aluno.
-</footer>
+<!-- SLIDE 20 - Relatório Final -->
+<div id="slide20" class="slide">
+  <h2>Relatório Final</h2>
+  <p id="relatorio"></p>
+  <button class="logout" onclick="mostrarSlide(0)">Sair</button>
+</div>
 
+<script>
+  let aluno = "";
+  let progresso = 1;
+  let totalAulas = 18; // do slide 3 ao 20
+
+  function mostrarSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('ativo'));
+    document.getElementById('slide' + n).classList.add('ativo');
+  }
+
+  function fazerLogin() {
+    const nome = document.getElementById('nomeAluno').value.trim();
+    if (!nome) {
+      alert("Por favor, digite seu nome.");
+      return;
+    }
+    aluno = nome;
+    progresso = 1;
+    gerarListaAulas();
+    mostrarSlide(2);
+  }
+
+  function gerarListaAulas() {
+    const lista = document.getElementById('listaAulas');
+    lista.innerHTML = "";
+    for (let i = 1; i <= totalAulas; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = "Aula " + i;
+      btn.disabled = i > progresso;
+      btn.onclick = () => mostrarSlide(i + 2);
+      lista.appendChild(btn);
+    }
+  }
+
+  function concluirAula(n) {
+    if (progresso < n - 2) progresso = n - 2;
+    if (progresso < totalAulas) {
+      progresso++;
+      gerarListaAulas();
+      alert("Aula concluída! Próxima aula desbloqueada.");
+      mostrarSlide(2);
+    } else {
+      gerarRelatorio();
+      mostrarSlide(20);
+    }
+  }
+
+  function gerarRelatorio() {
+    const data = new Date().toLocaleDateString('pt-BR');
+    const nota = (Math.random() * 3 + 7).toFixed(1); // nota entre 7.0 e 10.0
+    document.getElementById('relatorio').innerHTML =
+      `<b>Nome:</b> ${aluno}<br>
+       <b>Data de Conclusão:</b> ${data}<br>
+       <b>Nota Final:</b> ${nota}<br>
+       <br>Parabéns pela conclusão do curso!`;
+  }
+</script>
 </body>
-  </html>
+</html>
