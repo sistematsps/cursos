@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curso</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Config Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
+  authDomain: "meuappweb-65522.firebaseapp.com",
+  projectId: "meuappweb-65522",
+  storageBucket: "meuappweb-65522.firebasestorage.app",
+  messagingSenderId: "305368794616",
+  appId: "1:305368794616:web:d987589863479e576ac20d",
+  measurementId: "G-L0VWMGJ003"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let uidUsuario = null;
+const cursoId = "cursoXYZ";
+const totalSlides = 20;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "login.html";
+  uidUsuario = user.uid;
+
+  // Cria registro do curso para o aluno se não existir
+  const alunoCursoRef = doc(db, "alunos", uidUsuario, "cursos", cursoId);
+  const alunoCursoSnap = await getDoc(alunoCursoRef);
+  if (!alunoCursoSnap.exists()) {
+    await setDoc(alunoCursoRef, { progresso: 0, aulaAtual: 0, dataMatricula: new Date().toLocaleDateString("pt-BR") });
+  }
+
+  mostrarSlide(1); // inicia no slide 1
+});
+
+// Controle de slides
+let slideAtual = 1;
+function mostrarSlide(n) {
+  for (let i = 1; i <= totalSlides; i++) {
+    const s = document.getElementById("slide" + i);
+    if (s) s.style.display = (i === n ? "block" : "none");
+  }
+  slideAtual = n;
+}
+
+// Botões de navegação
+window.proximoSlide = async function() {
+  if (slideAtual === 2) {
+    // Salvar dados do aluno no Firestore
+    const nome = document.getElementById("nomeAluno").value;
+    if (!nome) { alert("Digite seu nome!"); return; }
+    const alunoRef = doc(db, "alunos", uidUsuario);
+    await updateDoc(alunoRef, { nome: nome });
+  }
+
+  if (slideAtual === 3) {
+    alert("Clique na aula desbloqueada para iniciar.");
+    return;
+  }
+
+  if (slideAtual < totalSlides) mostrarSlide(slideAtual + 1);
+};
+
+window.sair = async function() {
+  await signOut(auth);
+  window.location.href = "login.html";
+};
+
+// Concluir aula e atualizar progresso
+window.concluirAula = async function(aulaNumero) {
+  const alunoCursoRef = doc(db, "alunos", uidUsuario, "cursos", cursoId);
+  const alunoCursoSnap = await getDoc(alunoCursoRef);
+  const aulaAtual = alunoCursoSnap.data().aulaAtual || 0;
+
+  if (aulaNumero !== aulaAtual + 1) {
+    alert("Você precisa concluir a aula anterior primeiro!");
+    return;
+  }
+
+  const progresso = Math.round((aulaNumero / totalSlides) * 100);
+  await updateDoc(alunoCursoRef, { aulaAtual: aulaNumero, progresso: progresso });
+  alert(`Aula ${aulaNumero} concluída! Progresso: ${progresso}%`);
+
+  // Desbloquear próxima aula
+  document.getElementById(`aula${aulaNumero + 1}`)?.removeAttribute("disabled");
+};
+
+</script>
+
+<style>
+body { font-family: Arial; background: #f4f6f9; margin:0; padding:0; }
+.slide { display:none; padding: 20px; max-width:700px; margin: 20px auto; background:white; border-radius:12px; box-shadow:0 3px 8px rgba(0,0,0,0.1); }
+button { padding:10px 15px; border:none; border-radius:8px; background:#28a745; color:white; cursor:pointer; margin-top:10px; }
+button:hover { background:#218838; }
+button:disabled { background:#ccc; cursor:not-allowed; }
+h2 { color:#007bff; }
+input { padding:8px; width:90%; margin-top:10px; border-radius:6px; border:1px solid #ccc; }
+.aula-btn { display:block; margin:8px 0; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1 - Apresentação -->
+<div id="slide1" class="slide">
+  <h2>Bem-vindo ao Curso XYZ</h2>
+  <p>Descrição do curso...</p>
+  <button onclick="proximoSlide()">Iniciar Curso</button>
+  <button onclick="sair()">Sair</button>
+</div>
+
+<!-- Slide 2 - Identificação do aluno -->
+<div id="slide2" class="slide">
+  <h2>Identificação do Aluno</h2>
+  <input type="text" id="nomeAluno" placeholder="Digite seu nome">
+  <button onclick="proximoSlide()">Continuar</button>
+  <button onclick="sair()">Sair</button>
+</div>
+
+<!-- Slide 3 - Lista de aulas -->
+<div id="slide3" class="slide">
+  <h2>Aulas do Curso</h2>
+  <button id="aula1" class="aula-btn" onclick="concluirAula(1)">Aula 1 (Desbloqueada)</button>
+  <button id="aula2" class="aula-btn" onclick="concluirAula(2)" disabled>Aula 2 (Bloqueada)</button>
+  <button id="aula3" class="aula-btn" onclick="concluirAula(3)" disabled>Aula 3 (Bloqueada)</button>
+  <!-- Botões para futuras aulas -->
+</div>
+
+<!-- Slides 4 a 20 vazios -->
+<div id="slide4" class="slide"><h2>Slide 4</h2></div>
+<div id="slide5" class="slide"><h2>Slide 5</h2></div>
+<div id="slide6" class="slide"><h2>Slide 6</h2></div>
+<div id="slide7" class="slide"><h2>Slide 7</h2></div>
+<div id="slide8" class="slide"><h2>Slide 8</h2></div>
+<div id="slide9" class="slide"><h2>Slide 9</h2></div>
+<div id="slide10" class="slide"><h2>Slide 10</h2></div>
+<div id="slide11" class="slide"><h2>Slide 11</h2></div>
+<div id="slide12" class="slide"><h2>Slide 12</h2></div>
+<div id="slide13" class="slide"><h2>Slide 13</h2></div>
+<div id="slide14" class="slide"><h2>Slide 14</h2></div>
+<div id="slide15" class="slide"><h2>Slide 15</h2></div>
+<div id="slide16" class="slide"><h2>Slide 16</h2></div>
+<div id="slide17" class="slide"><h2>Slide 17</h2></div>
+<div id="slide18" class="slide"><h2>Slide 18</h2></div>
+<div id="slide19" class="slide"><h2>Slide 19</h2></div>
+<div id="slide20" class="slide"><h2>Slide 20</h2></div>
+
+</body>
+</html>
