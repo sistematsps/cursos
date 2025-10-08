@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Curso - 20 Aulas</title>
+<title>Curso</title>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -22,12 +22,20 @@ const firebaseConfig = {
   appId: "1:305368794616:web:d987589863479e576ac20d",
   measurementId: "G-L0VWMGJ003"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const cursoId = "cursoXYZ"; // substitua pelo ID real do curso
+/* ---------- Captura do ID do curso pela URL ---------- */
+const params = new URLSearchParams(window.location.search);
+const cursoId = params.get("id");
+
+if (!cursoId) {
+  alert("Curso inválido ou não encontrado.");
+  window.location.href = "painel.html";
+}
+
+/* ---------- Variáveis globais ---------- */
 const totalAulas = 20;
 const primeiroSlideAula = 3;
 const ultimoSlide = primeiroSlideAula + totalAulas - 1;
@@ -45,7 +53,7 @@ onAuthStateChanged(auth, async (user) => {
   uid = user.uid;
   document.getElementById("usuario-email").textContent = user.email;
 
-  // Pega os dados do aluno
+  // Buscar dados do aluno
   const alunoRef = doc(db, "alunos", uid);
   const alunoSnap = await getDoc(alunoRef);
   if (alunoSnap.exists()) {
@@ -53,11 +61,12 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("nome-aluno").textContent = alunoNome;
   }
 
-  // Cria referência do curso do aluno
+  // Referência do curso específico
   alunoCursoRef = doc(db, "alunos", uid, "cursos", cursoId);
   const cursoSnap = await getDoc(alunoCursoRef);
   if (!cursoSnap.exists()) {
     await setDoc(alunoCursoRef, {
+      cursoId: cursoId,
       aulaAtual: 0,
       progresso: 0,
       dataMatricula: new Date().toLocaleDateString("pt-BR"),
@@ -153,10 +162,10 @@ h1, h2 { color: #007bff; }
 footer { text-align: center; color: #666; margin-top: 20px; }
 </style>
 </head>
-<body>
 
+<body>
 <div style="max-width:800px;margin:auto;display:flex;justify-content:space-between;align-items:center;">
-  <span id="usuario-email" class="small"></span>
+  <span id="usuario-email"></span>
   <button class="btn-ghost" onclick="sair()">Sair</button>
 </div>
 
@@ -164,7 +173,7 @@ footer { text-align: center; color: #666; margin-top: 20px; }
 <div id="slide1" class="slide">
   <h1>Apresentação do Curso</h1>
   <p>Bem-vindo, <strong id="nome-aluno"></strong>!</p>
-  <p>Este é o início da sua jornada neste curso. Clique abaixo para começar.</p>
+  <p>Este é o início do curso que você escolheu. Clique abaixo para começar.</p>
   <button class="btn" onclick="iniciarCurso()">Acessar Curso</button>
 </div>
 
@@ -195,7 +204,7 @@ footer { text-align: center; color: #666; margin-top: 20px; }
     slide.className = "slide";
     slide.innerHTML = `
       <h2>Aula ${i}</h2>
-      <p>Conteúdo da Aula ${i} — insira aqui vídeos, textos, ou atividades.</p>
+      <p>Conteúdo da Aula ${i} — insira aqui vídeos, textos ou atividades.</p>
       <button class="btn" onclick="finalizarAula(${i})">Finalizar Aula ${i}</button>
       <button class="btn-ghost" onclick="mostrarSlide(2)">Voltar à Lista de Aulas</button>
     `;
@@ -206,6 +215,5 @@ footer { text-align: center; color: #666; margin-top: 20px; }
 <footer>
   Seu progresso será salvo automaticamente no painel do aluno.
 </footer>
-
 </body>
-  </html>
+</html>
