@@ -36,7 +36,7 @@
       await carregarDadosAluno();
       await carregarCursosMatriculados();
     } else {
-      window.location.href = "login.html";
+      window.location.href = "index.html";
     }
   });
 
@@ -108,7 +108,7 @@
   // 🔹 Botão Sair
   window.sair = async function sair() {
     await signOut(auth);
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   };
 
   // 🔹 Botão Voltar
