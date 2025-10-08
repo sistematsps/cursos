@@ -11,7 +11,6 @@
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // 🔧 Configuração do Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
     authDomain: "meuappweb-65522.firebaseapp.com",
@@ -28,7 +27,6 @@
 
   let uidUsuario = null;
 
-  // 🔹 Verifica se o usuário está logado
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       uidUsuario = user.uid;
@@ -38,49 +36,41 @@
     }
   });
 
-  // 🔹 Carregar cursos disponíveis
   async function carregarCursos() {
-    const lista = document.getElementById("listaCursos");
-    lista.innerHTML = "<p>Carregando cursos...</p>";
+    const container = document.getElementById("cursosContainer");
+    container.innerHTML = "<p>Carregando cursos...</p>";
 
     const cursosSnap = await getDocs(collection(db, "cursos"));
-    lista.innerHTML = "";
-
-    if (cursosSnap.empty) {
-      lista.innerHTML = "<p>Nenhum curso disponível no momento.</p>";
-      return;
-    }
+    container.innerHTML = "";
 
     cursosSnap.forEach(async (cursoDoc) => {
       const curso = cursoDoc.data();
       const idCurso = cursoDoc.id;
 
-      // Verifica se o aluno já está matriculado neste curso
       const matriculaRef = doc(db, "alunos", uidUsuario, "cursos", idCurso);
       const matriculaSnap = await getDoc(matriculaRef);
 
-      const item = document.createElement("li");
-      item.innerHTML = `
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
         <h3>${curso.nome}</h3>
-        <p>${curso.descricao || "Sem descrição disponível."}</p>
-        <p><strong>Carga Horária:</strong> ${curso.cargaHoraria || "—"} horas</p>
+        <p>${curso.descricao}</p>
+        <p><strong>Carga Horária:</strong> ${curso.cargaHoraria}h</p>
+        <a href="${curso.url}" target="_blank" class="linkCurso">Acessar Curso</a><br>
         ${
           matriculaSnap.exists()
-            ? `<button disabled>Já matriculado</button>`
+            ? `<button disabled>Já Matriculado</button>`
             : `<button onclick="matricular('${idCurso}', '${curso.nome}')">Matricular-se</button>`
         }
       `;
-      lista.appendChild(item);
+      container.appendChild(card);
     });
   }
 
-  // 🔹 Função de matrícula
   window.matricular = async function matricular(idCurso, nomeCurso) {
     if (!uidUsuario) return;
-
     const matriculaRef = doc(db, "alunos", uidUsuario, "cursos", idCurso);
     const matriculaSnap = await getDoc(matriculaRef);
-
     if (matriculaSnap.exists()) {
       alert("Você já está matriculado neste curso!");
       return;
@@ -94,10 +84,9 @@
     });
 
     alert(`Matrícula realizada com sucesso no curso "${nomeCurso}"!`);
-    carregarCursos(); // Atualiza a lista
+    carregarCursos();
   };
 
-  // 🔹 Funções de navegação
   window.voltarPainel = function voltarPainel() {
     window.location.href = "painel.html";
   };
@@ -113,7 +102,6 @@
     font-family: Arial, sans-serif;
     background-color: #f4f6f9;
     margin: 0;
-    padding: 0;
   }
 
   header {
@@ -124,88 +112,76 @@
   }
 
   .container {
-    max-width: 800px;
-    background: white;
+    max-width: 900px;
     margin: 30px auto;
-    padding: 20px 30px;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
   }
 
-  h2 {
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     text-align: center;
+  }
+
+  .card h3 {
     color: #007bff;
   }
 
-  ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  li {
-    background: #f8f9fa;
-    padding: 15px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    border: 1px solid #e1e1e1;
-  }
-
-  li h3 {
-    margin: 0;
-    color: #333;
-  }
-
-  li p {
-    margin: 5px 0;
+  .card p {
     color: #555;
+  }
+
+  .linkCurso {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: bold;
+  }
+
+  .linkCurso:hover {
+    text-decoration: underline;
   }
 
   button {
     padding: 8px 15px;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
     background-color: #007bff;
     color: white;
     margin-top: 10px;
+    cursor: pointer;
   }
 
   button:hover {
     background-color: #0056b3;
   }
 
-  #btnVoltar {
-    background-color: #28a745;
-  }
-
-  #btnVoltar:hover {
-    background-color: #218838;
-  }
-
-  #btnSair {
-    background-color: #dc3545;
-  }
-
-  #btnSair:hover {
-    background-color: #c82333;
-  }
-
   .acoes {
     display: flex;
     justify-content: space-between;
-    margin-top: 20px;
+    margin-top: 25px;
   }
+
+  #btnVoltar { background-color: #28a745; }
+  #btnVoltar:hover { background-color: #218838; }
+
+  #btnSair { background-color: #dc3545; }
+  #btnSair:hover { background-color: #c82333; }
 </style>
 </head>
 
 <body>
-  <header>
-    <h1>Cursos Disponíveis</h1>
-  </header>
+  <header><h1>Cursos Disponíveis</h1></header>
 
   <div class="container">
-    <h2>Escolha o curso que deseja se matricular</h2>
-    <ul id="listaCursos"></ul>
+    <div id="cursosContainer" class="cards"></div>
 
     <div class="acoes">
       <button id="btnVoltar" onclick="voltarPainel()">Voltar ao Painel</button>
@@ -213,4 +189,4 @@
     </div>
   </div>
 </body>
-</html>
+  </html>
