@@ -26,9 +26,8 @@ const auth = getAuth(app);
 
 /* Controle de login */
 onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-  } else if (user.email !== "admin@meuapp.com") {
+  if (!user) window.location.href = "login.html";
+  else if (user.email !== "admin@meuapp.com") {
     alert("Acesso restrito ao administrador.");
     signOut(auth);
   } else {
@@ -47,12 +46,14 @@ document.getElementById("form-curso").addEventListener("submit", async (e) => {
   e.preventDefault();
   const nome = document.getElementById("nome").value;
   const descricao = document.getElementById("descricao").value;
-  const url = document.getElementById("url").value; // Agora apenas a página do curso
+  const url = document.getElementById("url").value;
+  const cargaHoraria = parseInt(document.getElementById("cargaHoraria").value) || 0;
 
   await addDoc(collection(db, "cursos"), {
     nome,
     descricao,
     url,
+    cargaHoraria,
     criadoEm: new Date().toLocaleString()
   });
 
@@ -74,8 +75,9 @@ async function carregarCursos() {
     div.innerHTML = `
       <h3>${curso.nome}</h3>
       <p>${curso.descricao}</p>
-      <small><b>Página do Curso:</b> ${curso.url}</small><br>
-      <button class="btn" onclick="editarCurso('${docSnap.id}','${curso.nome}','${curso.descricao}','${curso.url}')">Editar</button>
+      <p><b>Página do Curso:</b> ${curso.url}</p>
+      <p><b>Carga Horária:</b> ${curso.cargaHoraria} horas</p>
+      <button class="btn" onclick="editarCurso('${docSnap.id}','${curso.nome}','${curso.descricao}','${curso.url}', ${curso.cargaHoraria})">Editar</button>
       <button class="btn-danger" onclick="excluirCurso('${docSnap.id}')">Excluir</button>
     `;
     lista.appendChild(div);
@@ -83,11 +85,12 @@ async function carregarCursos() {
 }
 
 /* Editar Curso */
-window.editarCurso = (id, nome, descricao, url) => {
+window.editarCurso = (id, nome, descricao, url, cargaHoraria) => {
   document.getElementById("edit-id").value = id;
   document.getElementById("edit-nome").value = nome;
   document.getElementById("edit-descricao").value = descricao;
   document.getElementById("edit-url").value = url;
+  document.getElementById("edit-cargaHoraria").value = cargaHoraria;
   document.getElementById("modal-editar").style.display = "flex";
 };
 
@@ -96,8 +99,9 @@ window.salvarEdicao = async () => {
   const nome = document.getElementById("edit-nome").value;
   const descricao = document.getElementById("edit-descricao").value;
   const url = document.getElementById("edit-url").value;
+  const cargaHoraria = parseInt(document.getElementById("edit-cargaHoraria").value) || 0;
 
-  await updateDoc(doc(db, "cursos", id), { nome, descricao, url, atualizadoEm: new Date().toLocaleString() });
+  await updateDoc(doc(db, "cursos", id), { nome, descricao, url, cargaHoraria, atualizadoEm: new Date().toLocaleString() });
 
   alert("Curso atualizado com sucesso!");
   fecharModal();
@@ -149,6 +153,8 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
   <textarea id="descricao" required></textarea>
   <label>Página do Curso</label>
   <input type="text" id="url" placeholder="Ex: matematica.html" required>
+  <label>Carga Horária (horas)</label>
+  <input type="number" id="cargaHoraria" min="1" required>
   <button type="submit" class="btn">Cadastrar Curso</button>
 </form>
 
@@ -166,6 +172,8 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
     <textarea id="edit-descricao"></textarea>
     <label>Página do Curso:</label>
     <input type="text" id="edit-url" placeholder="Ex: matematica.html">
+    <label>Carga Horária (horas)</label>
+    <input type="number" id="edit-cargaHoraria" min="1">
     <div style="margin-top:10px;">
       <button class="btn" onclick="salvarEdicao()">Salvar</button>
       <button class="btn-danger" onclick="fecharModal()">Cancelar</button>
