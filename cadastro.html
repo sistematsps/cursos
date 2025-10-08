@@ -59,7 +59,7 @@
       });
 
       alert("Cadastro realizado com sucesso!");
-      window.location.href = "login.html";
+      window.location.href = "index.html";
     } catch (erro) {
       console.error(erro);
       if (erro.code === "auth/email-already-in-use") {
@@ -132,7 +132,7 @@
     <input type="email" id="email" placeholder="E-mail" required>
     <input type="password" id="senha" placeholder="Senha" required>
     <button onclick="cadastrarAluno()">Cadastrar</button>
-    <p>Já tem conta? <a href="login.html">Faça login</a></p>
+    <p>Já tem conta? <a href="index.html">Faça login</a></p>
   </div>
 </body>
   </html>
