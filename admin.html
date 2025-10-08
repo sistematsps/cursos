@@ -10,7 +10,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-/* ---------- Firebase Config ---------- */
+/* Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
   authDomain: "meuappweb-65522.firebaseapp.com",
@@ -24,18 +24,16 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* ---------- Controle de Login ---------- */
+/* Controle de login */
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "login.html";
+  } else if (user.email !== "admin@meuapp.com") {
+    alert("Acesso restrito ao administrador.");
+    signOut(auth);
   } else {
-    if (user.email !== "admin@meuapp.com") {
-      alert("Acesso restrito ao administrador.");
-      signOut(auth);
-    } else {
-      document.getElementById("admin-email").textContent = user.email;
-      carregarCursos();
-    }
+    document.getElementById("admin-email").textContent = user.email;
+    carregarCursos();
   }
 });
 
@@ -44,12 +42,12 @@ window.sair = async () => {
   window.location.href = "login.html";
 };
 
-/* ---------- Cadastro de Curso ---------- */
+/* Cadastrar Curso */
 document.getElementById("form-curso").addEventListener("submit", async (e) => {
   e.preventDefault();
   const nome = document.getElementById("nome").value;
   const descricao = document.getElementById("descricao").value;
-  const url = document.getElementById("url").value;
+  const url = document.getElementById("url").value; // Agora apenas a página do curso
 
   await addDoc(collection(db, "cursos"), {
     nome,
@@ -63,7 +61,7 @@ document.getElementById("form-curso").addEventListener("submit", async (e) => {
   carregarCursos();
 });
 
-/* ---------- Listar Cursos ---------- */
+/* Listar cursos */
 async function carregarCursos() {
   const lista = document.getElementById("lista-cursos");
   lista.innerHTML = "";
@@ -76,15 +74,15 @@ async function carregarCursos() {
     div.innerHTML = `
       <h3>${curso.nome}</h3>
       <p>${curso.descricao}</p>
-      <small><b>URL:</b> ${curso.url}</small><br>
-      <button class="btn" onclick="editarCurso('${docSnap.id}', '${curso.nome}', '${curso.descricao}', '${curso.url}')">Editar</button>
+      <small><b>Página do Curso:</b> ${curso.url}</small><br>
+      <button class="btn" onclick="editarCurso('${docSnap.id}','${curso.nome}','${curso.descricao}','${curso.url}')">Editar</button>
       <button class="btn-danger" onclick="excluirCurso('${docSnap.id}')">Excluir</button>
     `;
     lista.appendChild(div);
   });
 }
 
-/* ---------- Editar Curso ---------- */
+/* Editar Curso */
 window.editarCurso = (id, nome, descricao, url) => {
   document.getElementById("edit-id").value = id;
   document.getElementById("edit-nome").value = nome;
@@ -99,24 +97,16 @@ window.salvarEdicao = async () => {
   const descricao = document.getElementById("edit-descricao").value;
   const url = document.getElementById("edit-url").value;
 
-  const ref = doc(db, "cursos", id);
-  await updateDoc(ref, {
-    nome,
-    descricao,
-    url,
-    atualizadoEm: new Date().toLocaleString()
-  });
+  await updateDoc(doc(db, "cursos", id), { nome, descricao, url, atualizadoEm: new Date().toLocaleString() });
 
   alert("Curso atualizado com sucesso!");
   fecharModal();
   carregarCursos();
 };
 
-window.fecharModal = () => {
-  document.getElementById("modal-editar").style.display = "none";
-};
+window.fecharModal = () => { document.getElementById("modal-editar").style.display = "none"; };
 
-/* ---------- Excluir Curso ---------- */
+/* Excluir curso */
 window.excluirCurso = async (id) => {
   if (confirm("Tem certeza que deseja excluir este curso?")) {
     await deleteDoc(doc(db, "cursos", id));
@@ -155,13 +145,10 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
 <form id="form-curso">
   <label>Nome do Curso</label>
   <input type="text" id="nome" required>
-
   <label>Descrição</label>
   <textarea id="descricao" required></textarea>
-
-  <label>URL do Curso</label>
-  <input type="text" id="url" placeholder="Ex: curso.html?id=matematica" required>
-
+  <label>Página do Curso</label>
+  <input type="text" id="url" placeholder="Ex: matematica.html" required>
   <button type="submit" class="btn">Cadastrar Curso</button>
 </form>
 
@@ -177,14 +164,13 @@ button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; }
     <input type="text" id="edit-nome">
     <label>Descrição:</label>
     <textarea id="edit-descricao"></textarea>
-    <label>URL:</label>
-    <input type="text" id="edit-url" placeholder="Ex: curso.html?id=matematica">
+    <label>Página do Curso:</label>
+    <input type="text" id="edit-url" placeholder="Ex: matematica.html">
     <div style="margin-top:10px;">
       <button class="btn" onclick="salvarEdicao()">Salvar</button>
       <button class="btn-danger" onclick="fecharModal()">Cancelar</button>
     </div>
   </div>
 </div>
-
 </body>
-</html>
+  </html>
