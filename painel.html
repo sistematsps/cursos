@@ -4,165 +4,134 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel do Aluno</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // 🔧 Configuração do Firebase (a mesma usada no cadastro e login)
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4AAbC8vCFAmlPlur12Nm7YBKPjaSjumM",
+    authDomain: "meuappweb-65522.firebaseapp.com",
+    projectId: "meuappweb-65522",
+    storageBucket: "meuappweb-65522.firebasestorage.app",
+    messagingSenderId: "305368794616",
+    appId: "1:305368794616:web:d987589863479e576ac20d",
+    measurementId: "G-L0VWMGJ003"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // 🔹 Verifica se o usuário está logado
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // Usuário logado, pega dados do Firestore
+      const uid = user.uid;
+      const docRef = doc(db, "alunos", uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const dados = docSnap.data();
+        document.getElementById("nomeAluno").textContent = dados.nome;
+        document.getElementById("emailAluno").textContent = dados.email;
+        document.getElementById("cpfAluno").textContent = dados.cpf;
+        document.getElementById("dataCadastro").textContent = dados.dataCadastro;
+        document.getElementById("dataNascimento").textContent = dados.dataNascimento || "Não informado";
+        document.getElementById("nomePai").textContent = dados.nomePai || "Não informado";
+        document.getElementById("nomeMae").textContent = dados.nomeMae || "Não informado";
+      } else {
+        alert("Dados do aluno não encontrados.");
+      }
+    } else {
+      // Se não estiver logado, redireciona para login
+      window.location.href = "login.html";
+    }
+  });
+
+  // 🔹 Função de sair
+  window.sair = async function sair() {
+    await signOut(auth);
+    localStorage.removeItem("alunoUID");
+    window.location.href = "login.html";
+  };
+</script>
+
 <style>
   body {
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: #f5f6fa;
+    font-family: Arial, sans-serif;
+    background-color: #f5f6fa;
     margin: 0;
     padding: 0;
   }
+
   header {
     background-color: #007bff;
     color: white;
-    padding: 15px 25px;
+    padding: 15px;
     text-align: center;
   }
-  .painel {
-    max-width: 900px;
-    margin: 30px auto;
+
+  .container {
+    max-width: 600px;
     background: white;
+    margin: 40px auto;
+    padding: 20px 30px;
     border-radius: 12px;
-    padding: 20px 40px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
   }
+
   h2 {
-    color: #333;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 8px;
+    text-align: center;
+    color: #007bff;
   }
-  .curso {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-  }
-  .curso:last-child {
-    border-bottom: none;
-  }
+
   .info {
-    text-align: left;
+    margin-bottom: 15px;
   }
-  .progresso {
-    width: 180px;
-    height: 12px;
-    border-radius: 6px;
-    background: #ddd;
-    overflow: hidden;
+
+  .info label {
+    font-weight: bold;
+    color: #555;
   }
-  .barra {
-    height: 100%;
-    background: #007bff;
-    transition: width 0.5s;
-  }
+
   button {
-    background: #007bff;
-    color: white;
+    width: 100%;
+    padding: 12px;
+    background-color: #dc3545;
     border: none;
-    border-radius: 6px;
-    padding: 8px 15px;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
     cursor: pointer;
-    transition: 0.3s;
   }
+
   button:hover {
-    background: #0056b3;
-  }
-  .certificado {
-    background: #28a745;
-  }
-  .logout {
-    background: #dc3545;
-    float: right;
+    background-color: #c82333;
   }
 </style>
 </head>
+
 <body>
+  <header>
+    <h1>Bem-vindo ao Painel do Aluno</h1>
+  </header>
 
-<header>
-  <h1>Painel do Aluno</h1>
-</header>
+  <div class="container">
+    <h2>Seus Dados</h2>
 
-<div class="painel">
-  <h2>Bem-vindo, <span id="nomeAluno"></span>!</h2>
-  <button class="logout" onclick="sair()">Sair</button>
+    <div class="info"><label>Nome:</label> <span id="nomeAluno"></span></div>
+    <div class="info"><label>Email:</label> <span id="emailAluno"></span></div>
+    <div class="info"><label>CPF:</label> <span id="cpfAluno"></span></div>
+    <div class="info"><label>Data de Nascimento:</label> <span id="dataNascimento"></span></div>
+    <div class="info"><label>Nome do Pai:</label> <span id="nomePai"></span></div>
+    <div class="info"><label>Nome da Mãe:</label> <span id="nomeMae"></span></div>
+    <div class="info"><label>Data de Cadastro:</label> <span id="dataCadastro"></span></div>
 
-  <h3>Seus Cursos</h3>
-  <div id="listaCursos"></div>
-</div>
-
-<script>
-  // Dados simulados (em breve substituímos pelo Firestore)
-  const aluno = {
-    nome: "João da Silva",
-    cursos: [
-      { id: 1, nome: "Introdução à Contabilidade", progresso: 100, nota: 9.5 },
-      { id: 2, nome: "Gestão Financeira Pessoal", progresso: 75, nota: null },
-      { id: 3, nome: "Educação Fiscal para Jovens", progresso: 30, nota: null },
-    ]
-  };
-
-  // Exibir nome e cursos
-  document.getElementById("nomeAluno").textContent = aluno.nome;
-
-  const lista = document.getElementById("listaCursos");
-  aluno.cursos.forEach(curso => {
-    const div = document.createElement("div");
-    div.className = "curso";
-
-    const info = document.createElement("div");
-    info.className = "info";
-    info.innerHTML = `
-      <strong>${curso.nome}</strong><br>
-      Progresso: ${curso.progresso}%<br>
-      ${curso.nota ? `Nota Final: <b>${curso.nota}</b>` : ""}
-    `;
-
-    const barra = document.createElement("div");
-    barra.className = "progresso";
-    const preenchimento = document.createElement("div");
-    preenchimento.className = "barra";
-    preenchimento.style.width = curso.progresso + "%";
-    barra.appendChild(preenchimento);
-
-    const btn = document.createElement("button");
-    btn.textContent = curso.progresso === 100 ? "Ver Certificado" : "Continuar Curso";
-    btn.className = curso.progresso === 100 ? "certificado" : "";
-    btn.onclick = () => abrirCurso(curso);
-
-    div.appendChild(info);
-    div.appendChild(barra);
-    div.appendChild(btn);
-    lista.appendChild(div);
-  });
-
-  function abrirCurso(curso) {
-    if (curso.progresso === 100) {
-      gerarCertificado(curso);
-    } else {
-      alert(`Abrindo curso: ${curso.nome}`);
-      // Aqui podemos redirecionar para o sistema de slides
-      // ex: window.location.href = `curso${curso.id}.html`;
-    }
-  }
-
-  function gerarCertificado(curso) {
-    const data = new Date().toLocaleDateString('pt-BR');
-    const texto = `
-      🏆 Certificado de Conclusão 🏆
-      
-      Certificamos que ${aluno.nome}
-      concluiu o curso "${curso.nome}"
-      em ${data}, com nota final ${curso.nota}.
-    `;
-    alert(texto);
-  }
-
-  function sair() {
-    alert("Saindo do painel...");
-    // Redirecionar para tela de login
-    // window.location.href = "login.html";
-  }
-</script>
-
+    <button onclick="sair()">Sair</button>
+  </div>
 </body>
-</html>
+  </html>
