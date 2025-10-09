@@ -37,6 +37,10 @@
   button:hover {
     background: #0056b3;
   }
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -59,16 +63,25 @@
 <div class="slide" id="slide3">
   <h2>Lista de Aulas</h2>
   <ul id="listaAulas">
-    <li><button onclick="irParaSlide(4)">Aula 1</button></li>
-    <li><button id="aula2" disabled>Aula 2</button></li>
-    <li><button id="aula3" disabled>Aula 3</button></li>
-    <li><button id="aula4" disabled>Aula 4</button></li>
+    <li><button id="btnAula1" onclick="irParaSlide(4)">Aula 1</button></li>
+    <li><button id="btnAula2" disabled>Aula 2</button></li>
+    <li><button id="btnAula3" disabled>Aula 3</button></li>
   </ul>
 </div>
 
-<!-- SLIDES 4 A 20 - CONTEÚDO DAS AULAS -->
-<div class="slide" id="slide4"><h2>Aula 1</h2><div class="conteudo"></div><button onclick="finalizarAula(1)">Finalizar Aula 1</button></div>
-<div class="slide" id="slide5"><div class="conteudo"></div></div>
+<!-- SLIDES 4 a 20 -->
+<div class="slide" id="slide4">
+  <h2>Aula 1</h2>
+  <div class="conteudo">Conteúdo da Aula 1</div>
+  <button onclick="finalizarAula(1)">Finalizar Aula 1</button>
+</div>
+
+<div class="slide" id="slide5">
+  <h2>Aula 2</h2>
+  <div class="conteudo">Conteúdo da Aula 2</div>
+  <button onclick="finalizarAula(2)">Finalizar Aula 2</button>
+</div>
+
 <div class="slide" id="slide6"><div class="conteudo"></div></div>
 <div class="slide" id="slide7"><div class="conteudo"></div></div>
 <div class="slide" id="slide8"><div class="conteudo"></div></div>
@@ -94,16 +107,28 @@ function irParaSlide(num) {
   document.getElementById(`slide${slideAtual}`).classList.add("ativo");
 }
 
+// Função de finalização de aula
 function finalizarAula(num) {
   alert(`Aula ${num} concluída!`);
+
   if (num === 1) {
-    document.getElementById("aula2").disabled = false;
+    const btnAula2 = document.getElementById("btnAula2");
+    btnAula2.disabled = false;
+    btnAula2.onclick = () => irParaSlide(5); // ativa a próxima aula
     alert("Aula 2 desbloqueada!");
   }
-  irParaSlide(3);
+
+  if (num === 2) {
+    const btnAula3 = document.getElementById("btnAula3");
+    btnAula3.disabled = false;
+    btnAula3.onclick = () => irParaSlide(6); // ativa a próxima aula
+    alert("Aula 3 desbloqueada!");
+  }
+
+  irParaSlide(3); // retorna à lista de aulas
 }
 
-// Exemplo de exibição dos dados do aluno (puxar via login)
+// Exemplo: dados do aluno via login
 document.getElementById("alunoInfo").innerText = "Aluno logado: João da Silva";
 </script>
 
