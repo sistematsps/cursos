@@ -3,106 +3,389 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cadastro - Mini WhatsApp</title>
+  <title>Mini WhatsApp</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #075E54;
+      background: #ece5dd;
+      margin: 0;
+      padding: 0;
       display: flex;
+      height: 100vh;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      color: white;
     }
-
+    #login-screen, #register-screen, #chat-screen {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
     form {
-      background: white;
-      color: black;
-      padding: 30px;
+      background: #fff;
+      padding: 20px;
       border-radius: 10px;
+      box-shadow: 0 0 5px #aaa;
       width: 90%;
-      max-width: 350px;
       text-align: center;
     }
-
-    input {
+    input, select {
       width: 100%;
+      margin: 10px 0;
       padding: 10px;
-      margin: 8px 0;
+      font-size: 16px;
       border-radius: 5px;
       border: 1px solid #ccc;
     }
-
     button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
+      background: #25d366;
+      color: white;
       border: none;
       border-radius: 5px;
-      background: #128C7E;
-      color: white;
+      padding: 10px;
       font-size: 16px;
       cursor: pointer;
     }
-
     button:hover {
-      background: #0a6f5b;
+      background: #128c7e;
+    }
+    .link {
+      margin-top: 10px;
+      color: #007bff;
+      cursor: pointer;
+    }
+    .chat-container {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+    #contacts {
+      width: 30%;
+      background: #fff;
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+    }
+    .contact {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .contact:hover {
+      background: #f9f9f9;
+    }
+    #chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #e5ddd5;
+    }
+    #chat-header {
+      background: #075e54;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+    }
+    #messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    .message {
+      padding: 8px 12px;
+      margin: 5px;
+      border-radius: 10px;
+      max-width: 60%;
+      clear: both;
+    }
+    .sent {
+      background: #dcf8c6;
+      margin-left: auto;
+    }
+    .received {
+      background: #fff;
+      margin-right: auto;
+    }
+    #input-area {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      background: #f0f0f0;
+    }
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    #send-btn {
+      margin-left: 10px;
+      background: #25d366;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    #logout-btn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #search-input {
+      width: 90%;
+      margin: 10px;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <form id="cadastroForm">
-    <h2>Criar Conta</h2>
-    <input type="text" id="nome" placeholder="Nome completo" required />
-    <input type="email" id="email" placeholder="E-mail" required />
-    <input type="password" id="senha" placeholder="Senha" required />
-    <button type="submit">Cadastrar</button>
-    <p id="msg"></p>
-  </form>
+
+  <!-- TELA DE LOGIN -->
+  <div id="login-screen" style="display:flex;">
+    <form id="login-form">
+      <h2>Entrar no Chat</h2>
+      <input type="email" id="login-email" placeholder="E-mail" required />
+      <input type="password" id="login-senha" placeholder="Senha" required />
+      <button type="submit">Entrar</button>
+      <div class="link" id="show-register">Cadastre-se</div>
+    </form>
+  </div>
+
+  <!-- TELA DE CADASTRO -->
+  <div id="register-screen">
+    <form id="register-form">
+      <h2>Criar Conta</h2>
+      <input type="text" id="register-nome" placeholder="Nome completo" required />
+      <input type="email" id="register-email" placeholder="E-mail" required />
+      <input type="password" id="register-senha" placeholder="Senha" required />
+      <select id="register-funcao" required>
+        <option value="">Selecione a função</option>
+        <option value="master">Master</option>
+        <option value="gerente">Gerente</option>
+        <option value="vendedor">Vendedor</option>
+        <option value="cliente">Cliente</option>
+      </select>
+      <button type="submit">Cadastrar</button>
+      <div class="link" id="show-login">Já tem conta? Entrar</div>
+    </form>
+  </div>
+
+  <!-- TELA DO CHAT -->
+  <div id="chat-screen">
+    <button id="logout-btn">Sair</button>
+    <div class="chat-container">
+      <div id="contacts">
+        <input type="text" id="search-input" placeholder="Buscar contato..." />
+        <div id="contacts-list"></div>
+      </div>
+      <div id="chat-area">
+        <div id="chat-header">Selecione um contato</div>
+        <div id="messages"></div>
+        <div id="input-area">
+          <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
+          <button id="send-btn">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, doc, setDoc, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, createUserWithEmailAndPassword
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, collection, getDocs, query,
+      where, onSnapshot, arrayUnion, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_DOMINIO.firebaseapp.com",
-      projectId: "SEU_PROJECT_ID",
-      storageBucket: "SEU_PROJECT_ID.appspot.com",
-      messagingSenderId: "SEU_SENDER_ID",
-      appId: "SEU_APP_ID"
+      apiKey: "AIzaSyC0dUhymi72gkug-oo0-xqqBEtgvlIgvY0",
+      authDomain: "cursos-6f950.firebaseapp.com",
+      projectId: "cursos-6f950",
+      storageBucket: "cursos-6f950.appspot.com",
+      messagingSenderId: "146131122545",
+      appId: "1:146131122545:web:043f8207f457ad5b7f5ed0"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const form = document.getElementById("cadastroForm");
-    const msg = document.getElementById("msg");
+    // Elementos
+    const loginScreen = document.getElementById("login-screen");
+    const registerScreen = document.getElementById("register-screen");
+    const chatScreen = document.getElementById("chat-screen");
+    const showRegister = document.getElementById("show-register");
+    const showLogin = document.getElementById("show-login");
+    const contactsList = document.getElementById("contacts-list");
+    const searchInput = document.getElementById("search-input");
+    const chatHeader = document.getElementById("chat-header");
+    const messagesDiv = document.getElementById("messages");
+    const msgInput = document.getElementById("message-input");
+    const sendBtn = document.getElementById("send-btn");
+    const logoutBtn = document.getElementById("logout-btn");
 
-    form.onsubmit = async (e) => {
+    let currentUser = null;
+    let selectedContact = null;
+    let unsubscribeMessages = null;
+
+    // Alternar telas
+    showRegister.onclick = () => {
+      loginScreen.style.display = "none";
+      registerScreen.style.display = "flex";
+    };
+    showLogin.onclick = () => {
+      registerScreen.style.display = "none";
+      loginScreen.style.display = "flex";
+    };
+
+    // Cadastrar usuário
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const nome = document.getElementById("nome").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const senha = document.getElementById("senha").value.trim();
+      const nome = document.getElementById("register-nome").value;
+      const email = document.getElementById("register-email").value;
+      const senha = document.getElementById("register-senha").value;
+      const funcao = document.getElementById("register-funcao").value;
 
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, senha);
-        await setDoc(doc(db, "users", cred.user.uid), {
-          nome,
-          email,
-          criadoEm: serverTimestamp()
+        const userCred = await createUserWithEmailAndPassword(auth, email, senha);
+        await setDoc(doc(db, "users", userCred.user.uid), {
+          nome, email, funcao, createdAt: serverTimestamp()
         });
-        msg.textContent = "Cadastro realizado com sucesso!";
-        setTimeout(() => window.location.href = "index.html", 1500);
+        alert("Cadastro realizado com sucesso!");
+        registerScreen.style.display = "none";
+        loginScreen.style.display = "flex";
       } catch (err) {
-        msg.textContent = "Erro: " + err.message;
+        alert("Erro ao cadastrar: " + err.message);
       }
+    });
+
+    // Login
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const senha = document.getElementById("login-senha").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, senha);
+      } catch (err) {
+        alert("Erro ao entrar: " + err.message);
+      }
+    });
+
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        loginScreen.style.display = "none";
+        registerScreen.style.display = "none";
+        chatScreen.style.display = "block";
+        loadContacts();
+      } else {
+        chatScreen.style.display = "none";
+        loginScreen.style.display = "flex";
+      }
+    });
+
+    async function loadContacts() {
+      contactsList.innerHTML = "";
+      const chatsSnap = await getDocs(collection(db, "chats"));
+      const contactIds = new Set();
+
+      chatsSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.mensagens) {
+          const related = data.mensagens.some(m => m.de === currentUser.uid || m.para === currentUser.uid);
+          if (related) {
+            const ids = docSnap.id.split("_");
+            const contactId = ids.find(id => id !== currentUser.uid);
+            if (contactId) contactIds.add(contactId);
+          }
+        }
+      });
+
+      for (let id of contactIds) {
+        const u = await getDoc(doc(db, "users", id));
+        if (u.exists()) {
+          const div = document.createElement("div");
+          div.classList.add("contact");
+          div.textContent = u.data().nome;
+          div.onclick = () => openChat(id, u.data().nome);
+          contactsList.appendChild(div);
+        }
+      }
+    }
+
+    searchInput.addEventListener("input", async () => {
+      const term = searchInput.value.toLowerCase();
+      if (term.length < 2) return;
+
+      const q = query(collection(db, "users"));
+      const snap = await getDocs(q);
+      contactsList.innerHTML = "";
+      snap.forEach(u => {
+        const d = u.data();
+        if (d.nome.toLowerCase().includes(term) || d.email.toLowerCase().includes(term)) {
+          const div = document.createElement("div");
+          div.classList.add("contact");
+          div.textContent = d.nome;
+          div.onclick = () => openChat(u.id, d.nome);
+          contactsList.appendChild(div);
+        }
+      });
+    });
+
+    async function openChat(contactId, contactName) {
+      selectedContact = contactId;
+      chatHeader.textContent = "Conversando com " + contactName;
+      messagesDiv.innerHTML = "";
+      if (unsubscribeMessages) unsubscribeMessages();
+
+      const chatId = [currentUser.uid, contactId].sort().join("_");
+      const chatRef = doc(db, "chats", chatId);
+
+      unsubscribeMessages = onSnapshot(chatRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        const mensagens = data.mensagens || [];
+        messagesDiv.innerHTML = "";
+        mensagens.forEach(msg => {
+          const div = document.createElement("div");
+          div.classList.add("message", msg.de === currentUser.uid ? "sent" : "received");
+          div.textContent = msg.texto;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    sendBtn.onclick = async () => {
+      const texto = msgInput.value.trim();
+      if (!texto || !selectedContact) return;
+      const chatId = [currentUser.uid, selectedContact].sort().join("_");
+      const chatRef = doc(db, "chats", chatId);
+      await setDoc(chatRef, {
+        mensagens: arrayUnion({
+          texto,
+          de: currentUser.uid,
+          para: selectedContact,
+          timestamp: serverTimestamp()
+        })
+      }, { merge: true });
+      msgInput.value = "";
     };
   </script>
 </body>
