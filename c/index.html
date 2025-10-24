@@ -1,0 +1,431 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini WhatsApp — Login + Chat</title>
+<style>
+  :root{--green:#00a884;--muted:#888;--bg:#f2f2f2}
+  *{box-sizing:border-box}
+  body{font-family:Inter,Arial;margin:0;background:var(--bg)}
+  .center{display:flex;align-items:center;justify-content:center;height:100vh}
+  .card{width:980px;height:80vh;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.08);border-radius:10px;display:flex;overflow:hidden}
+  /* left */
+  .left{width:320px;border-right:1px solid #eee;display:flex;flex-direction:column}
+  .left .top{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0}
+  .left .search{padding:12px;border-bottom:1px solid #f0f0f0}
+  .left .search input{width:100%;padding:8px;border-radius:20px;border:1px solid #ddd}
+  .contacts{flex:1;overflow:auto}
+  .contact{display:flex;align-items:center;padding:12px;gap:10px;border-bottom:1px solid #fafafa;cursor:pointer}
+  .contact:hover{background:#fbfffb}
+  .avatar{width:44px;height:44px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .contact .meta{display:flex;flex-direction:column}
+  .contact .meta .name{font-weight:600}
+  .contact .meta .preview{font-size:13px;color:var(--muted)}
+  .smallbtn{background:var(--green);color:#fff;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+  /* right */
+  .right{flex:1;display:flex;flex-direction:column}
+  .chat-header{padding:14px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:12px}
+  .chat-header .name{font-weight:700}
+  .messages{flex:1;padding:16px;overflow:auto;background:#e5ddd5;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:70%;padding:10px 12px;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.06);word-wrap:break-word}
+  .msg.sent{align-self:flex-end;background:#dcf8c6;border-bottom-right-radius:4px}
+  .msg.received{align-self:flex-start;background:#fff;border-bottom-left-radius:4px}
+  .ts{display:block;font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+  .composer{display:flex;padding:12px;border-top:1px solid #eee;gap:8px}
+  .composer input{flex:1;padding:10px;border-radius:20px;border:1px solid #ddd}
+  .composer button{background:var(--green);border:none;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}
+
+  /* login overlay */
+  #loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}
+  .loginBox{background:#fff;padding:20px;border-radius:12px;width:360px;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+  .loginBox input, .loginBox select{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd}
+  .link{color:var(--green);cursor:pointer;font-weight:600}
+
+  /* modal register */
+  .modal{position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
+  .modal .panel{background:#fff;padding:18px;border-radius:10px;width:520px;max-height:85vh;overflow:auto}
+  .row{display:flex;gap:10px}
+  .col{flex:1}
+  .muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="center">
+    <div class="card" id="appCard">
+      <div class="left">
+        <div class="top">
+          <div style="font-weight:700">Mini WhatsApp</div>
+          <div>
+            <button class="smallbtn" id="btnOpenRegister">Cadastrar</button>
+          </div>
+        </div>
+
+        <div class="search">
+          <input id="searchInput" placeholder="Pesquisar por nome ou e-mail (exato)" />
+        </div>
+
+        <div class="contacts" id="contacts"></div>
+      </div>
+
+      <div class="right">
+        <div class="chat-header">
+          <div class="avatar" id="chatAvatar">?</div>
+          <div>
+            <div class="name" id="chatName">Selecione um contato</div>
+            <div class="muted" id="chatSubtitle">Inicie uma conversa pesquisando ou selecionando um chat ativo</div>
+          </div>
+          <div style="margin-left:auto">
+            <button id="logoutBtn" style="background:#f44336;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer">Sair</button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="composer">
+          <input id="messageInput" placeholder="Digite uma mensagem..." />
+          <button id="sendBtn">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- login overlay -->
+  <div id="loginOverlay">
+    <div class="loginBox">
+      <h3>Entrar</h3>
+      <input id="loginEmail" placeholder="E-mail" />
+      <input id="loginPassword" type="password" placeholder="Senha" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="loginBtn" style="flex:1;background:var(--green);color:#fff;border:none;padding:10px;border-radius:8px">Entrar</button>
+        <button id="btnOpenRegister2" style="flex:1;border:1px solid #ddd;background:#fff">Cadastrar</button>
+      </div>
+      <div style="margin-top:10px;text-align:center" class="muted">Digite e-mail e senha para entrar. Se ainda não tem conta, clique em Cadastrar.</div>
+      <div id="loginMsg" style="margin-top:8px;color:#c62828"></div>
+    </div>
+  </div>
+
+  <!-- modal register -->
+  <div class="modal" id="registerModal">
+    <div class="panel">
+      <h3>Cadastrar Usuário</h3>
+      <div class="row">
+        <div class="col">
+          <input id="regNome" placeholder="Nome completo" />
+        </div>
+        <div class="col">
+          <input id="regEmail" placeholder="E-mail" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <input id="regSenha" type="password" placeholder="Senha" />
+        </div>
+        <div class="col">
+          <select id="regFuncao">
+            <option value="cliente">cliente</option>
+            <option value="vendedor">vendedor</option>
+            <option value="gerente">gerente</option>
+            <option value="master">master</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="margin-top:8px">Selecione vendedores (apenas se cliente)</label>
+      <select id="regVendedores" multiple style="width:100%;height:120px;margin-bottom:10px"></select>
+
+      <div style="display:flex;gap:8px">
+        <button id="doRegister" style="background:var(--green);color:#fff;border:none;padding:10px;border-radius:8px">Salvar</button>
+        <button id="cancelRegister" style="border:1px solid #ddd;padding:10px;border-radius:8px">Cancelar</button>
+      </div>
+      <div id="regMsg" style="margin-top:8px;color:#c62828"></div>
+      <p class="muted" style="margin-top:12px">Ao cadastrar o cliente, os vendedores selecionados receberão vínculo automaticamente.</p>
+    </div>
+  </div>
+
+<script type="module">
+  // imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot,
+    updateDoc, arrayUnion, arrayRemove, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // CONFIG — sua config
+  const firebaseConfig = {
+    apiKey: "AIzaSyC0dUhymi72gkug-oo0-xqqBEtgvlIgvY0",
+    authDomain: "cursos-6f950.firebaseapp.com",
+    projectId: "cursos-6f950",
+    storageBucket: "cursos-6f950.appspot.com",
+    messagingSenderId: "146131122545",
+    appId: "1:146131122545:web:043f8207f457ad5b7f5ed0"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // UI refs
+  const loginOverlay = document.getElementById('loginOverlay');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginMsg = document.getElementById('loginMsg');
+  const btnOpenRegister = document.getElementById('btnOpenRegister');
+  const btnOpenRegister2 = document.getElementById('btnOpenRegister2');
+  const registerModal = document.getElementById('registerModal');
+  const doRegister = document.getElementById('doRegister');
+  const cancelRegister = document.getElementById('cancelRegister');
+  const regNome = document.getElementById('regNome');
+  const regEmail = document.getElementById('regEmail');
+  const regSenha = document.getElementById('regSenha');
+  const regFuncao = document.getElementById('regFuncao');
+  const regVendedores = document.getElementById('regVendedores');
+  const regMsg = document.getElementById('regMsg');
+
+  const contactsEl = document.getElementById('contacts');
+  const searchInput = document.getElementById('searchInput');
+  const messagesEl = document.getElementById('messages');
+  const chatNameEl = document.getElementById('chatName');
+  const chatAvatar = document.getElementById('chatAvatar');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  // state
+  let currentUser = null;
+  let currentUserDoc = null;
+  let currentChatId = null;
+  let currentContact = null;
+  let unsubscribeChat = null;
+  let chatListeners = {};
+
+  // helper formatting
+  function avatarLetter(name){ return name ? name[0].toUpperCase() : '?' }
+  function formatTime(ts){
+    try{ const d = ts && ts.toDate ? ts.toDate() : (typeof ts === 'number' ? new Date(ts) : new Date()); return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){return ''}
+  }
+
+  // open register modal (from left or login)
+  btnOpenRegister.onclick = ()=> openRegister();
+  btnOpenRegister2.onclick = ()=> openRegister();
+
+  function openRegister(){
+    regNome.value=''; regEmail.value=''; regSenha.value=''; regFuncao.value='cliente'; regMsg.textContent='';
+    loadVendedoresInModal();
+    registerModal.style.display='flex';
+  }
+  cancelRegister.onclick = ()=> registerModal.style.display='none';
+
+  // load vendedores into modal select
+  async function loadVendedoresInModal(){
+    regVendedores.innerHTML = '';
+    try{
+      const q = query(collection(db,'users'), where('funcao','==','vendedor'));
+      const snap = await getDocs(q);
+      if(snap.empty){ const o=document.createElement('option'); o.textContent='Nenhum vendedor cadastrado'; o.disabled=true; regVendedores.appendChild(o); return; }
+      snap.forEach(d=>{
+        const u=d.data();
+        const opt=document.createElement('option'); opt.value=d.id; opt.textContent=u.nome || u.email || d.id; regVendedores.appendChild(opt);
+      });
+    } catch(e){ console.error(e); regVendedores.innerHTML='<option disabled>Erro ao carregar</option>'; }
+  }
+
+  // register user (creates in Auth and writes /users/{uid})
+  doRegister.onclick = async ()=>{
+    regMsg.style.color='#c62828'; regMsg.textContent='';
+    const nome = regNome.value.trim();
+    const email = regEmail.value.trim();
+    const senha = regSenha.value;
+    const funcao = regFuncao.value;
+    const vendedores = Array.from(regVendedores.selectedOptions).map(o=>o.value);
+
+    if(!nome || !email || !senha){ regMsg.textContent='Preencha nome, e-mail e senha.'; return; }
+
+    doRegister.disabled = true;
+    try{
+      // create Auth user
+      const cred = await createUserWithEmailAndPassword(auth, email, senha);
+      const uid = cred.user.uid;
+      // create users doc
+      await setDoc(doc(db,'users',uid), {
+        nome, email, funcao, vendedores: funcao==='cliente'?vendedores:[], vinculos: [], createdAt: serverTimestamp()
+      });
+      // if client, add vinculo to selected vendors
+      if(funcao==='cliente'){
+        for(const vid of vendedores){
+          await updateDoc(doc(db,'users',vid), { vinculos: arrayUnion(uid) }).catch(()=>{});
+        }
+      }
+      regMsg.style.color='#2e7d32'; regMsg.textContent='Cadastrado com sucesso!';
+      setTimeout(()=>{ registerModal.style.display='none'; }, 700);
+    } catch(err){
+      console.error(err); regMsg.textContent = err.message || 'Erro ao cadastrar';
+    } finally{ doRegister.disabled=false; }
+  };
+
+  // LOGIN
+  loginBtn.onclick = async ()=>{
+    loginMsg.textContent=''; loginBtn.disabled=true;
+    const email = loginEmail.value.trim(); const senha = loginPassword.value;
+    if(!email||!senha){ loginMsg.textContent='Digite e-mail e senha'; loginBtn.disabled=false; return; }
+    try{
+      await signInWithEmailAndPassword(auth, email, senha);
+      loginEmail.value=''; loginPassword.value='';
+    }catch(err){ loginMsg.textContent = err.message || 'Erro ao entrar'; console.error(err); }
+    loginBtn.disabled=false;
+  };
+
+  logoutBtn.onclick = async ()=>{ await signOut(auth); };
+
+  // onAuth change
+  onAuthStateChanged(auth, async user=>{
+    if(user){
+      currentUser = user;
+      // load user doc
+      const uDoc = await getDoc(doc(db,'users',user.uid));
+      currentUserDoc = uDoc.exists()?uDoc.data():{nome:user.email, email:user.email, funcao:'cliente'};
+      hideLoginOverlay();
+      await loadActiveChatsList();
+    } else {
+      currentUser = null; currentUserDoc = null; showLoginOverlay();
+      // clean UI
+      contactsEl.innerHTML=''; messagesEl.innerHTML=''; chatNameEl.textContent='Selecione um contato';
+    }
+  });
+
+  function showLoginOverlay(){ document.getElementById('loginOverlay').style.display='flex'; document.getElementById('chat-screen').style.display='none'; document.querySelector('.card').style.display='block'; }
+  function hideLoginOverlay(){ document.getElementById('loginOverlay').style.display='none'; document.getElementById('chat-screen').style.display='flex'; }
+
+  // load only chats where user is participant AND have messages (active chats)
+  async function loadActiveChatsList(){
+    contactsEl.innerHTML = '<div style="padding:12px;color:#666">Carregando conversas...</div>';
+    // query chats where users array contains currentUser.uid
+    const q = query(collection(db,'chats'), where('users','array-contains', currentUser.uid));
+    // use onSnapshot to keep live updates
+    onSnapshot(q, snap=>{
+      contactsEl.innerHTML = '';
+      if(snap.empty){ contactsEl.innerHTML='<div style="padding:12px;color:#666">Ainda não há conversas. Pesquise por um contato para iniciar.</div>'; return; }
+      snap.forEach(async docSnap=>{
+        const c = docSnap.data();
+        // only show if mensagens exist and length>0
+        const msgs = c.mensagens || [];
+        if(!msgs || msgs.length === 0) return; // skip inactive chats
+        // determine other participant
+        const other = c.users.find(uid => uid !== currentUser.uid);
+        if(!other) return;
+        // load other user doc
+        const otherDoc = await getDoc(doc(db,'users',other));
+        const otherData = otherDoc.exists() ? otherDoc.data() : { nome: other, email:'' };
+        // create contact element
+        const div = document.createElement('div'); div.className='contact';
+        div.innerHTML = `<div class="avatar">${avatarLetter(otherData.nome)}</div>
+                         <div class="meta"><div class="name">${otherData.nome || other}</div>
+                         <div class="preview">${ (msgs[msgs.length-1] && msgs[msgs.length-1].type==='text') ? msgs[msgs.length-1].content : (msgs[msgs.length-1] ? (msgs[msgs.length-1].type==='image'?'📷 Foto':'🎵 Áudio') : '') }</div></div>`;
+        div.onclick = ()=> openChatWith(other, docSnap.id, otherData);
+        contactsEl.appendChild(div);
+      });
+    }, err => { console.error('erro chats',err); contactsEl.innerHTML='<div style="padding:12px;color:#c00">Erro ao carregar chats</div>' });
+  }
+
+  // open chat given other uid and chatDocId if exists (otherwise create)
+  async function openChatWith(otherUid, chatDocId = null, otherData = null){
+    // close previous
+    if(unsubscribeChat) unsubscribeChat();
+    currentChatId = chatDocId || [currentUser.uid, otherUid].sort().join('_');
+    currentContact = otherUid;
+    // set header
+    if(!otherData){
+      const od = await getDoc(doc(db,'users',otherUid)); otherData = od.exists()?od.data():{nome:otherUid};
+    }
+    chatNameEl.textContent = otherData.nome || otherData.email || otherUid;
+    chatAvatar.textContent = avatarLetter(otherData.nome);
+
+    // ensure chat doc exists
+    const chatRef = doc(db,'chats',currentChatId);
+    const chatSnap = await getDoc(chatRef);
+    if(!chatSnap.exists()){
+      await setDoc(chatRef, { users: [currentUser.uid, otherUid], mensagens: [] });
+    }
+
+    // subscribe messages
+    unsubscribeChat = onSnapshot(chatRef, snap=>{
+      const data = snap.exists()?snap.data():null;
+      const msgs = data?.mensagens || [];
+      renderMessages(msgs);
+    });
+  }
+
+  // render messages array
+  function renderMessages(msgs){
+    messagesEl.innerHTML = '';
+    msgs.forEach(m=>{
+      const d = document.createElement('div'); d.className='msg ' + (m.sender===currentUser.uid ? 'sent' : 'received');
+      if(m.type==='text') d.textContent = m.content;
+      else if(m.type==='image'){ const img=document.createElement('img'); img.src=m.content; img.style.maxWidth='220px'; d.appendChild(img); }
+      else if(m.type==='audio'){ const audio=document.createElement('audio'); audio.controls=true; audio.src=m.content; d.appendChild(audio); }
+      const ts = document.createElement('span'); ts.className='ts'; ts.textContent = formatTime(m.timestamp);
+      d.appendChild(ts);
+      messagesEl.appendChild(d);
+    });
+    // scroll to bottom
+    const last = messagesEl.lastElementChild; if(last) last.scrollIntoView({behavior:'smooth', block:'end'});
+  }
+
+  // sending message (push into array)
+  sendBtn.onclick = async ()=>{
+    const text = messageInput.value.trim();
+    if(!text || !currentChatId || !currentContact) return;
+    const chatRef = doc(db,'chats',currentChatId);
+    // append message
+    await updateDoc(chatRef, { mensagens: arrayUnion({ sender: currentUser.uid, type:'text', content:text, timestamp: serverTimestamp() }) });
+    messageInput.value = '';
+  };
+
+  // search handler: finds user by exact email OR exact nome; if found, shows as result (allow start chat)
+  searchInput.addEventListener('keydown', async (e)=>{
+    if(e.key !== 'Enter') return;
+    const term = searchInput.value.trim();
+    if(!term) return;
+    // search users collection by email or nome
+    const results = [];
+    try{
+      const qEmail = query(collection(db,'users'), where('email','==',term));
+      const qNome = query(collection(db,'users'), where('nome','==',term));
+      const [snapE, snapN] = await Promise.all([getDocs(qEmail), getDocs(qNome)]);
+      snapE.forEach(d=> results.push({uid:d.id, data:d.data()}));
+      snapN.forEach(d=> {
+        // avoid duplicates
+        if(!results.some(r=>r.uid===d.id)) results.push({uid:d.id, data:d.data()});
+      });
+    }catch(err){ console.error('search err',err); alert('Erro na pesquisa'); return; }
+
+    // render results in temporary area (prepend to top of contacts list)
+    if(results.length===0){ alert('Nenhum usuário encontrado com esse nome ou e-mail'); return; }
+    // show first match(s) as clickable to start conversation (do not add to active list until messages exist)
+    // create a small overlay-like result on top of contacts
+    contactsEl.innerHTML = ''; // clear list to display search results (user can clear by emptying search)
+    results.forEach(r=>{
+      const u = r.data;
+      const div = document.createElement('div'); div.className='contact';
+      div.innerHTML = `<div class="avatar">${avatarLetter(u.nome)}</div><div class="meta"><div class="name">${u.nome}</div><div class="preview muted">${u.email}</div></div>`;
+      div.onclick = ()=> openChatWith(r.uid,null,u);
+      contactsEl.appendChild(div);
+    });
+  });
+
+  // utility: when clear search, reload active chats
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    if(e.target.value.trim()===''){ loadActiveChatsList(); }
+  });
+
+  // helper: avatar letter
+  function avatarLetter(n){ return n? n[0].toUpperCase() : '?' }
+
+  // initial note: onAuthStateChanged will show overlay if not logged
+  // done
+</script>
+</body>
+</html>
